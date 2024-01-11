@@ -22,23 +22,33 @@ def unpack_message(msg):
     return opcode, data_from_msg
 
 
+def get_data_from_string(line, leng):
+    """
+    :param line: line to slice
+    :param leng: length to slice
+    :return:
+    """
+    # getting the data from the length of the string
+    data = line[leng:leng + int(line[:leng])]
+
+    # substring
+    line = line[leng + int(line[:leng])::]
+
+    return data, line
+
+
 def unpack_files_message(msg):
-    def get_data_from_string(line, leng):
-        # getting the data from the length of the string
-        data = line[leng:leng + int(line[:leng])]
-
-        # substring
-        line = line[leng + int(line[:leng])::]
-
-        return data, line
-
+    """
+    :param msg: the files message
+    :return: list of branches each branch has its directories and files
+    """
     branches = []
 
     # until last element since its blank
     lines = msg.split('\n')[:-1]
 
     for line in lines:
-        nameToAdd, line = get_data_from_string(line, 2)
+        name_to_add, line = get_data_from_string(line, 2)
         dirs, line = get_data_from_string(line, 4)
         files, line = get_data_from_string(line, 4)
 
@@ -49,51 +59,132 @@ def unpack_files_message(msg):
         files = files.split('@')
 
         # adding to list of branches
-        branches.append((nameToAdd, dirs, files))
+        branches.append((name_to_add, dirs, files))
 
     return branches
 
 
 def pack_register_request(username, password, email):
     """
-    :param username: username of user
-    :param password: password of user
-    :param email: email of user
+    :param username: username
+    :param password: password
+    :param email: email
     :return: message built by protocol
     """
-    return f"01{str(len(username)).zfill(2)}{username}{str(len(password)).zfill(2)}{password}{str(len(email)).zfill(2)}{email}"
+    return f"01{str(len(username)).zfill(2)}{username}{str(len(password)).zfill(2)}{password}" \
+        f"{str(len(email)).zfill(2)}{email}"
 
 
-def pack_login_request(usernaname, password):
+def pack_login_request(username, password):
+    """
+    :param username: username
+    :param password: password
+    :return: message built py protocol
+    """
+    return f"02{str(len(username)).zfill(2)}{username}{str(len(password)).zfill(2)}{password}"
 
 
-def Pack_verify_check_request(code):
+def pack_verify_check_request(code):
+    """
+    :param username: username
+    :return: message built py protocol
+    """
+    return f"15{str(len(code)).zfill(2)}{code}"
 
 
-def Pack_forgot_password_request(email):
+def pack_forgot_password_request(email):
+    """
+    :param email: email
+    :return: message built py protocol
+    """
+    return f"07{str(len(email)).zfill(2)}{email}"
 
 
-def Pack_file_download_request(path):
+def pack_file_download_request(path):
+    """
+    :param path: path of file to download
+    :return: message built py protocol
+    """
+    return f"11{str(len(path)).zfill(2)}{path}"
 
 
-def Pack_upload_file_request(path, upload_path):
+def pack_upload_port_request():
+    """
+    :return: message built py protocol
+    """
+    return f"16"
 
-def pack_create_folder_request(name, upload_path):
 
-def Pack_delete_request():
+def pack_upload_file_request(upload_path, data):
+    """
+    :param upload_path: path to upload to including file name
+    :param data: data of file
+    :return: message built py protocol
+    """
+    return f"12{str(len(upload_path)).zfill(2)}{upload_path}{str(len(data)).zfill(6)}{data}"
 
-def Pack_rename_file_request():
 
-def Pack_share_request():
+def pack_create_folder_request(path):
+    """
+    :param path: path of where to create the folder
+    :return: message built py protocol
+    """
+    return f"13{str(len(path)).zfill(2)}{path}"
 
-def Pack__change_userename_request():
 
-def Pack_change_password_request():
+def pack_delete_request(path):
+    """
+    :param path: path of file to delete
+    :return: message built py protocol
+    """""
+    return f"10{str(len(path)).zfill(2)}{path}"
 
-def Pack_change_email_request():
+
+def pack_rename_file_request(path, new_name):
+    """
+    :param path: path of file to rename
+    :param new_name: new name of file
+    :return: message built py protocol
+    """
+    return f"08{str(len(path)).zfill(2)}{path}{str(len(new_name)).zfill(2)}{new_name}"
+
+
+def pack_share_request(path, username):
+    """
+    :param path: file to share path
+    :param username: username of person to share
+    :return: message built py protocol
+    """
+    return f"09{str(len(path)).zfill(2)}{path}{str(len(username)).zfill(2)}{username}"
+
+
+def pack_change_username_request(username):
+    """
+    :param username: username to change to
+    :return: message built py protocol
+    """
+    return f"04{str(len(username)).zfill(2)}{username}"
+
+
+def pack_change_password_request(password):
+    """
+    :param password: password
+    :return: message built py protocol
+    """
+    return f"06{str(len(password)).zfill(2)}{password}"
+
+
+def pack_change_email_request(email):
+    """
+    :param email: email
+    :return: message built py protocol
+    """
+    return f"05{str(len(email)).zfill(2)}{email}"
 
 
 if __name__ == '__main__':
-    print(unpack_files_message("000007folder10009fil1.docx\n07folder10008checking0000\n16folder1\checking00000000"))
+    print(unpack_files_message("000007folder10009fil1.docx\n07folder10008checking0000\n16folder1\\checking00000000"))
 
     print(pack_register_request("reef", "123", "reefg19@gmail.com"))
+
+    print(pack_login_request("reef", "123"))

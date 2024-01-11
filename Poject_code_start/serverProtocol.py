@@ -11,16 +11,24 @@ def unpack_message(msg):
     data_from_msg = []
     msg = msg[2:]
 
-    while len(msg) > 0:
-        try:
-            leng = msg[:2]
-            msg = msg[2:]
-            data_from_msg.append(msg[:int(leng)])
-            msg = msg[int(leng):]
-        except Exception as e:
-            print("in unpack_message -", str(e))
-            opcode = None
-            break
+    if opcode == "12":
+        leng = msg[:2]
+        msg = msg[2:]
+        data_from_msg.append(msg[:int(leng)])
+        msg = msg[int(leng):]
+        data_from_msg.append(msg[:])
+
+    else:
+        while len(msg) > 0:
+            try:
+                leng = msg[:2]
+                msg = msg[2:]
+                data_from_msg.append(msg[:int(leng)])
+                msg = msg[int(leng):]
+            except Exception as e:
+                print("in unpack_message -", str(e))
+                opcode = None
+                break
 
     return opcode, data_from_msg
 
@@ -94,6 +102,10 @@ def pack_file_download_response(response):
     return "11" + str(response)
 
 
+def pack_upload_port_response(response):
+    return "16" + str(response)
+
+
 def pack_file_upload_response(response):
     """
     :param response: response to send
@@ -150,9 +162,12 @@ def pack_change_email_response(response):
     return "05" + str(response)
 
 
+def pack_verify_email_message():
+    return "17"
+
+
 if __name__ == '__main__':
-    code, data_from_message = unpack_message("0112abaaaaaaaaaa01b")
-    data = pack_files_message("reefg")
+    code, data_from_message = unpack_message("1210reef/reef1000012")
+    data = pack_files_message("reef")
 
-    print(data)
-
+    print(data_from_message)
