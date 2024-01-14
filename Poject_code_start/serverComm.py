@@ -47,7 +47,6 @@ class ServerComm:
                     enc_obj = self.openClients[currSocket][1]
 
                     decrypted_data = enc_obj.dec_msg(data)
-
                 except Exception as e:
                     print("main server in server comm ", str(e))
                     self._handle_disconnect(currSocket)
@@ -91,7 +90,7 @@ class ServerComm:
         """
         sock = None
         for soc in self.openClients.keys():
-            if self.openClients[soc] == ip:
+            if self.openClients[soc][0] == ip:
                 sock = soc
                 break
         return sock

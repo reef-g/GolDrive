@@ -9,7 +9,7 @@ import clientProtocol
 
 class ClientComm:
     def __init__(self, server_ip, port, recv_q, msg_len_bytes):
-        self.serverIp = server_ip
+        self.server_ip = server_ip
         self.port = port
         self.recvQ = recv_q
         self.socket = socket.socket()
@@ -20,7 +20,7 @@ class ClientComm:
 
     def _main_loop(self):
         try:
-            self.socket.connect((self.serverIp, self.port))
+            self.socket.connect((self.server_ip, self.port))
         except Exception as e:
             sys.exit("Server is closed try again later")
 
@@ -72,8 +72,9 @@ if __name__ == "__main__":
     while not server.enc_obj:
         pass
 
-    server.send(clientProtocol.pack_register_request("lior1", "check123", "reefg19@gmail.com"))
+    server.send(clientProtocol.pack_register_request("lior123", "check123", "reefg19@gmail.com"))
 
     while True:
-        pass
+        data = msgQ.get()
+        print(data)
 

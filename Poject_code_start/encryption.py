@@ -36,13 +36,12 @@ def hash_msg(msg):
 
 def get_dh_factor():
     private_key = random.randint(1, p)
-    print(g, private_key)
-    print((g ** private_key) % 123)
+
     return private_key, (g ** private_key) % p
 
 
 def create_symmetry_key(private_key, shared_key):
-    return Encryption((private_key ** shared_key) % p)
+    return Encryption((shared_key ** private_key) % p)
 
 
 p = 7591
@@ -50,12 +49,11 @@ g = 1307
 
 
 if __name__ == '__main__':
-    aKey, aFactor = get_dh_factor()
-    bKey, bFactor = get_dh_factor()
-    print(type(aFactor), bFactor)
+    privateA, a = get_dh_factor()
+    privateB, b = get_dh_factor()
 
-    cryptoA = create_symmetry_key(aFactor, bKey)
-    cryptoB = create_symmetry_key(bFactor, aKey)
+    cryptoA = create_symmetry_key(b, privateA)
+    cryptoB = create_symmetry_key(a, privateB)
     msgToCrypt = "Geleo world"
     enc1 = cryptoA.enc_msg(msgToCrypt)
 

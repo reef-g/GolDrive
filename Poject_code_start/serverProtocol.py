@@ -52,11 +52,12 @@ def pack_files_message(username):
     :param username:
     :return: string with all files and directories of user in the drive
     """
-    files_of_user = ""
+    files_of_user = "13"
     # the path to work at, will later to change to the person directory
-    path = fr"D:\!ReefGold\Drive_files\\{username}"
+    path = fr"C:\Users\reefg\PycharmProjects\alpha"
 
     for (dirname, dirs, files) in os.walk(path):
+        print(dirname)
         # removing the path so that its only the directories in the system and not from the server
         dirname = dirname[len(path) + 1::]
 
@@ -73,107 +74,109 @@ def pack_files_message(username):
 
         files_of_user += '\n'
 
+    print(files_of_user)
     return files_of_user
 
 
 def pack_register_response(response):
     """
-    :param response: response to send
-    :return: opcode + response
+    :param response: response to register
+    :return: opcode + length + response
     """
-    return "01" + str(response)
+    return f"01{str(len(str(response))).zfill(2)}{response}"
 
 
 def pack_login_response(response):
     """
-    :param response: response to send
-    :return: opcode + response
+    :param response: response to login
+    :return: opcode + length + response
     """
-    return "02" + str(response)
+    return f"02{str(len(str(response))).zfill(2)}{response}"
 
 
 def pack_verify_check_response(response):
     """
-    :param response: response to send
-    :return: opcode + response
+    :param response: response to verify check
+    :return: opcode + length + response
     """
-    return "15" + str(response)
+    return f"15{str(len(str(response))).zfill(2)}{response}"
 
 
 def pack_forgot_password_response(response):
     """
-    :param response: response to send
-    :return: opcode + response
+    :param response: response to forgot password
+    :return: opcode + length + response
     """
-    return "07" + str(response)
+    return f"07{str(len(str(response))).zfill(2)}{response}"
 
 
-def pack_file_download_response(response):
-    """
-    :param response: response to send
-    :return: opcode + response
-    """
-    return "11" + str(response)
+def pack_file_download_response():
+    # download file response
+    return "11"
 
 
 def pack_upload_port_response(response):
-    return "16" + str(response)
+    """
+    :param response: response to upload port
+    return: opcode + length + response
+    """
+    return f"16{str(len(str(response))).zfill(2)}{response}"
 
 
 def pack_file_upload_response(response):
     """
-    :param response: response to send
-    :return: opcode + response
+    :param response: response to file upload
+    :return: opcode + length + response
     """
-    return "12" + str(response)
+    return f"12{str(len(str(response))).zfill(2)}{response}"
 
 
 def pack_create_folder_response(response):
     """
-    :param response: response to send
-    :return: opcode + response
+    :param response: response to folder create
+    :return: opcode + length + response
     """
-    return "13" + str(response)
+    return f"13{str(len(str(response))).zfill(2)}{response}"
 
 
 def pack_delete_response(response):
     """
-    :param response: response to send
-    :return: opcode + response
+    :param response: response to file delete
+    :return: opcode + length + response
     """
-    return "10" + str(response)
+    return f"10{str(len(str(response))).zfill(2)}{response}"
 
 
 def pack_share_response(response):
     """
-    :param response: response to send
-    :return: opcode + response
+    :param response: response to share file
+    :return: opcode + length + response
     """
-    return "09" + str(response)
+    return f"09{str(len(str(response))).zfill(2)}{response}"
 
 
 def pack_change_username_response(response):
     """
-    :param response: response to send
-    :return: opcode + response
+    :param response: response to change username
+    :return: opcode + length + response
     """
-    return "04" + str(response)
+    return f"04{str(len(str(response))).zfill(2)}{response}"
 
 
 def pack_change_passowrd_response(response):
     """
-    :param response: response to send
-    :return: opcode + response
+    :param response: response to change password
+    :return: opcode + length + response
     """
-    return "06" + str(response)
+    return f"06{str(len(str(response))).zfill(2)}{response}"
 
 
 def pack_change_email_response(response):
     """
-    :param response: response to send
-    :return: opcode + response
+    :param response: response to change email
+    :return: opcode + length + response
     """
-    return "05" + str(response)
+    return f"05{str(len(str(response))).zfill(2)}{response}"
 
 
 def pack_verify_email_message():

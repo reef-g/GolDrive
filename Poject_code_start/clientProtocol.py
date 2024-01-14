@@ -3,19 +3,22 @@ def unpack_message(msg):
     :param msg: message to unpack
     :return: tuple with opcode and variables
     """
-
     opcode = msg[:2]
     msg = msg[2:]
     data_from_msg = []
 
-    while len(msg) > 0:
-        try:
-            data, msg = get_data_from_string(msg, 2)
-            data_from_msg.append(data)
-        except Exception as e:
-            print("in unpack_message -", str(e))
-            opcode = None
-            break
+    if opcode == "13":
+        data_from_msg = unpack_files_message(msg)
+
+    else:
+        while len(msg) > 0:
+            try:
+                data, msg = get_data_from_string(msg, 2)
+                data_from_msg.append(data)
+            except Exception as e:
+                print("in unpack_message -", str(e))
+                opcode = None
+                break
 
     return opcode, data_from_msg
 
@@ -59,6 +62,7 @@ def unpack_files_message(msg):
         # adding to list of branches
         branches.append((name_to_add, dirs, files))
 
+    print(branches)
     return branches
 
 

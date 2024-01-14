@@ -5,6 +5,7 @@ import serverProtocol
 import Settings
 import DB
 import encryption
+import time
 
 
 def main_loop():
@@ -35,8 +36,6 @@ def _handle_messages(main_server, msg_q, recv_commands):
         ip, data = msg_q.get()
         protocol_num, params = serverProtocol.unpack_message(data)
 
-        print(data)
-
         if protocol_num in recv_commands.keys():
             recv_commands[protocol_num](main_server, my_db, ip, *params)
 
@@ -55,10 +54,13 @@ def _handle_registration(main_server, db, client_ip, username, password, mail):
     msg = serverProtocol.pack_register_response(ans)
     main_server.send(client_ip, msg)
 
+    if ans == 0:
+        print(f"Added user - {username}")
+
 
 def _handle_login(main_server, db, client_ip, username, password):
     status = 1
-    if encryption.hash_msg(password) == db.get_password(username):
+    if password == db.get_password(username):
         status = 0
 
     msg = serverProtocol.pack_login_response(status)
