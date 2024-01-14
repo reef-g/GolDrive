@@ -5,15 +5,13 @@ def unpack_message(msg):
     """
 
     opcode = msg[:2]
-    data_from_msg = []
     msg = msg[2:]
+    data_from_msg = []
 
     while len(msg) > 0:
         try:
-            leng = msg[:2]
-            msg = msg[2:]
-            data_from_msg.append(msg[:int(leng)])
-            msg = msg[int(leng):]
+            data, msg = get_data_from_string(msg, 2)
+            data_from_msg.append(data)
         except Exception as e:
             print("in unpack_message -", str(e))
             opcode = None
@@ -86,7 +84,7 @@ def pack_login_request(username, password):
 
 def pack_verify_check_request(code):
     """
-    :param username: username
+    :param code: code sent to email
     :return: message built py protocol
     """
     return f"15{str(len(code)).zfill(2)}{code}"
@@ -186,5 +184,5 @@ if __name__ == '__main__':
     print(unpack_files_message("000007folder10009fil1.docx\n07folder10008checking0000\n16folder1\\checking00000000"))
 
     print(pack_register_request("reef", "123", "reefg19@gmail.com"))
-
+    print(unpack_message("0104reef0312317reefg19@gmail.com"))
     print(pack_login_request("reef", "123"))

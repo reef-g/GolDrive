@@ -2,22 +2,23 @@ import socket
 import select
 import threading
 import queue
-import setting
+import Settings
 import serverProtocol
+import encryption
 
 
 class ServerComm:
-    def __init__(self, port, recvQ, msgLenBytes):
+    def __init__(self, port, recv_q, msg_len_bytes):
         """
         :param port
-        :param recvQ
+        :param recv_q
         """
         self.port = port
-        self.recvQ = recvQ
+        self.recv_q = recv_q
         self.serverSocket = socket.socket()
         self.openClients = {}  # [socket]:[ip, key]
         self.isRunning = False
-        self.msgLenBytes = msgLenBytes
+        self.msgLenBytes = msg_len_bytes
 
         threading.Thread(target=self._main_loop).start()
 
@@ -37,67 +38,51 @@ class ServerComm:
                     client, addr = self.serverSocket.accept()
                     print(f"{addr[0]} - Connected")
 
-                    threading .Thread(target=self._change_key,args=(client, addr[0],)).start()
+                    threading.Thread(target=self._change_key, args=(client, addr[0],)).start()
                     continue
 
                 try:
                     data_len = int(currSocket.recv(self.msgLenBytes).decode())
                     data = currSocket.recv(data_len).decode()
+                    enc_obj = self.openClients[currSocket][1]
+
+                    decrypted_data = enc_obj.dec_msg(data)
+
                 except Exception as e:
                     print("main server in server comm ", str(e))
                     self._handle_disconnect(currSocket)
 
                 else:
-                    if data == "":
+                    if decrypted_data == "":
                         self._handle_disconnect(currSocket)
 
                     else:
-                        # data = decrypt self.openClients[currSocket][1] (data
-                        if self.port == setting.SERVERPORT:
-                            self.recvQ.put((self.openClients[currSocket][0], data))
+                        if self.port == Settings.SERVERPORT:
+                            self.recv_q.put((self.openClients[currSocket][0], decrypted_data))
 
                         # files server
                         else:
-                            fileName, fileLen = serverProtocol.unpack_message(data)
-                            self._recv_file(currSocket, fileName, fileLen)
-
-    def _recv_file(self,client,fileName,fileLen):
-        data = bytearray()
-        try:
-            while len(data) < fileLen:
-                slice = fileLen - len(data)
-                if slice > 1024:
-                    data.extend(client.recv(1024))
-                else:
-                    data.extend(client.recv(slice))
-                    break
-        except Exception as e:
-            self.recvQ.put(("fail", self.openClients[client][0], fileName))
-            print("main server in recv file comm ", str(e))
-            self._handle_disconnect(client)
-        else:
-            self.recvQ.put(("success", self.openClients[client][0], fileName,data))
-
-
-
+                            file_name, file_len = serverProtocol.unpack_message(decrypted_data)
+                            self._recv_file(currSocket, file_name, file_len)
 
     def _change_key(self, client, ip):
-        pass
-        # get_delf_num
-        # build protocol
-        # client.send(
-        # client.rev
-        # crypto - create_sym(a,b)
-        #self.openClients[client]=(ip, crypto)
-
-        print(f"{ip} - complete change key")
+        privateA, a = encryption.get_dh_factor()
+        try:
+            client.send((str(a).zfill(10)).encode())
+            b = int(client.recv(10).decode())
+        except Exception as e:
+            print("in change key ", str(e))
+            client.close()
+        else:
+            crypto = encryption.create_symmetry_key(privateA, b)
+            self.openClients[client] = [ip, crypto]
+            print(f"{ip} - complete change key")
 
     def _handle_disconnect(self, sock):
         if sock in self.openClients.keys():
-            print(f"{self.openClients[sock]} - Disconnected")
+            print(f"{self.openClients[sock][0]} - Disconnected")
             del self.openClients[sock]
             sock.close()
-
 
     def _find_socket_by_ip(self, ip):
         """
@@ -111,25 +96,25 @@ class ServerComm:
                 break
         return sock
 
-    def send(self, ip, msg):
+    def send(self, ip, data):
         """
-        :param ip:
-        :param msg:
+        :param ip: ip to send to
+        :param data: data of message to send
         :return: sends msg to the socket with right ip
         """
         if self._running_status():
             client = self._find_socket_by_ip(ip)
             if client:
-                # encrypt the msg key = self.openClients[currSocket][1]
+                enc_obj = self.openClients[client][1]
+                encrypt_data = enc_obj.enc_msg(data)
+
+                # the length of the encrypted message
                 data_len = str(len(encrypt_data)).zfill(self.msgLenBytes).encode()
                 try:
-                    # send len
                     client.send(data_len + encrypt_data)
                 except Exception as e:
                     print("server com - send", str(e))
                     self._handle_disconnect(client)
-
-    # def _change_key(self, client, addr):
 
     def _close_server(self):
         """
@@ -143,8 +128,23 @@ class ServerComm:
         """
         return self.isRunning
 
-    # def _recv_file(self, path):
-    #     pass
+    def _recv_file(self, client, file_name, file_len):
+        data = bytearray()
+        try:
+            while len(data) < file_len:
+                slices = file_len - len(data)
+                if slices > 1024:
+                    data.extend(client.recv(1024))
+                else:
+                    data.extend(client.recv(slices))
+                    break
+        except Exception as e:
+            self.recv_q.put(("fail", self.openClients[client][0], file_name))
+            print("main server in recv file comm ", str(e))
+            self._handle_disconnect(client)
+        else:
+            self.recv_q.put(("success", self.openClients[client][0], file_name, data))
+
 
 if __name__ == "__main__":
     msgQ = queue.Queue()

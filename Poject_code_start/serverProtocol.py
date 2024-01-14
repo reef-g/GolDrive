@@ -21,16 +21,30 @@ def unpack_message(msg):
     else:
         while len(msg) > 0:
             try:
-                leng = msg[:2]
-                msg = msg[2:]
-                data_from_msg.append(msg[:int(leng)])
-                msg = msg[int(leng):]
+                data, msg = get_data_from_string(msg, 2)
+                data_from_msg.append(data)
+
             except Exception as e:
                 print("in unpack_message -", str(e))
                 opcode = None
                 break
 
     return opcode, data_from_msg
+
+
+def get_data_from_string(line, leng):
+    """
+    :param line: line to slice
+    :param leng: length to slice
+    :return:
+    """
+    # getting the data from the length of the string
+    data = line[leng:leng + int(line[:leng])]
+
+    # substring
+    line = line[leng + int(line[:leng])::]
+
+    return data, line
 
 
 def pack_files_message(username):
@@ -168,6 +182,6 @@ def pack_verify_email_message():
 
 if __name__ == '__main__':
     code, data_from_message = unpack_message("1210reef/reef1000012")
-    data = pack_files_message("reef")
+    dataa = pack_files_message("reef")
 
     print(data_from_message)

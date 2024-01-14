@@ -1,7 +1,7 @@
 import sqlite3
-import time
 
-class SQLDB:
+
+class DB:
     def __init__(self):
         """
         creates the table
@@ -131,5 +131,5 @@ class SQLDB:
 
 
 if __name__ == '__main__':
-    s = SQLDB()
-    s.change_email("dsa", "da")
+    s = DB()
+    s.delete_user("reef")

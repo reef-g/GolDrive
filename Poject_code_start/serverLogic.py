@@ -2,8 +2,9 @@ import queue
 import threading
 import serverComm
 import serverProtocol
-import setting
+import Settings
 import DB
+import encryption
 
 
 def main_loop():
@@ -12,10 +13,12 @@ def main_loop():
     """
     # will be the database object later
     msg_q = queue.Queue()
-    recv_commands = {}
+    recv_commands = {"01": _handle_registration, "02": _handle_login}
     used_port = []
+    if used_port:
+        pass
 
-    main_server = serverComm.ServerComm(setting.SERVERPORT, msg_q, 2)
+    main_server = serverComm.ServerComm(Settings.SERVERPORT, msg_q, 2)
     threading.Thread(target=_handle_messages, args=(main_server, msg_q, recv_commands, )).start()
 
 
@@ -26,16 +29,19 @@ def _handle_messages(main_server, msg_q, recv_commands):
     :param recv_commands: dictionary of functions according to their opcode
     :return: takes the message out the message queue and runs the according function
     """
-    my_db = DB.SQLDB()
+    my_db = DB.DB()
 
     while True:
         ip, data = msg_q.get()
         protocol_num, params = serverProtocol.unpack_message(data)
+
+        print(data)
+
         if protocol_num in recv_commands.keys():
             recv_commands[protocol_num](main_server, my_db, ip, *params)
 
 
-def _handle_registration(main_server, db, client_ip,username, password, mail):
+def _handle_registration(main_server, db, client_ip, username, password, mail):
     """
     :param main_server: the server object
     :param username: username
@@ -52,7 +58,7 @@ def _handle_registration(main_server, db, client_ip,username, password, mail):
 
 def _handle_login(main_server, db, client_ip, username, password):
     status = 1
-    if encryption.get_hash(password) == db.get_password(username):
+    if encryption.hash_msg(password) == db.get_password(username):
         status = 0
 
     msg = serverProtocol.pack_login_response(status)
