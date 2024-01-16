@@ -5,8 +5,6 @@ import serverProtocol
 import Settings
 import DB
 import encryption
-import time
-
 
 def main_loop():
     """

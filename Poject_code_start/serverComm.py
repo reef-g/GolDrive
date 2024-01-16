@@ -65,6 +65,11 @@ class ServerComm:
                             self._recv_file(currSocket, file_name, file_len)
 
     def _change_key(self, client, ip):
+        """
+        :param client: client socket
+        :param ip: client ip
+        :return: exchanges a symmetrical keys in order to get aes key
+        """
         privateA, a = encryption.get_dh_factor()
         try:
             client.send((str(a).zfill(10)).encode())
