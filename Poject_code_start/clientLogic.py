@@ -4,6 +4,7 @@ import clientProtocol
 import Settings
 import threading
 import graphics
+from pubsub import pub
 
 
 def main_loop():
@@ -17,11 +18,6 @@ def main_loop():
     threading.Thread(target=_handle_messages, args=(msg_q, recv_commands, frame, )).start()
 
     app.MainLoop()
-
-    # while not client_socket.enc_obj:
-    #     pass
-    #
-    # client_socket.send(clientProtocol.pack_login_request("reef", "check123"))
 
 
 def _handle_messages(msg_q, recv_commands, frame):
@@ -46,9 +42,10 @@ def _handle_login(frame, status):
     if status == "0":
         print("Logged in")
         frame.main_panel.change_screen(frame.main_panel.login, frame.main_panel.files)
+        pub.sendMessage("loginOk")
 
     if status == "1":
-        print("Didn't work", status)
+        pub.sendMessage("loginNotOk")
     pass
 
 

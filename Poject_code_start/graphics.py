@@ -1,6 +1,6 @@
 import wx
 import clientProtocol
-
+from pubsub import pub
 
 class MyFrame(wx.Frame):
     def __init__(self, comm, parent=None):
@@ -45,6 +45,10 @@ class MainPanel(wx.Panel):
         curScreen.Hide()
         screen.Show()
 
+        self.Layout()
+        self.Refresh()
+        self.Update()
+
 
 class LoginPanel(wx.Panel):
     def __init__(self, parent, frame, comm):
@@ -54,10 +58,10 @@ class LoginPanel(wx.Panel):
         self.parent = parent
         self.SetBackgroundColour(wx.LIGHT_GREY)
 
-        title = wx.StaticText(self, -1, label="Login Panel", pos=(0, 0))
-        titlefont = wx.Font(22, wx.DECORATIVE, wx.NORMAL, wx.NORMAL)
+        title = wx.StaticText(self, -1, label="LOG IN", pos=(0, 0))
+        font = wx.Font(25, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False, "High Tower Text")
         title.SetForegroundColour(wx.BLACK)
-        title.SetFont(titlefont)
+        title.SetFont(font)
 
         nameBox = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -75,8 +79,18 @@ class LoginPanel(wx.Panel):
         passBox.Add(passText, 0, wx.ALL, 5)
         passBox.Add(self.passField, 0, wx.ALL, 5)
 
+        pub.subscribe("loginOk", self.login_ok)
+        pub.subscribe("loginNotOk", self.login_notOk)
+
         ok_button = wx.Button(self, label="OK", pos=(30, 140))
         self.Bind(wx.EVT_BUTTON, self.on_ok, ok_button)
+
+
+    def login_ok(self):
+        self.parent.change_screen(self, self.parent.files)
+
+    def login_notOk(self):
+        self.show_pop_up("Wrong username or password entered.", "Error")
 
     def on_ok(self, event):
         username_input = self.nameField.GetValue()
@@ -85,20 +99,16 @@ class LoginPanel(wx.Panel):
         self.nameField.SetValue("")
         self.passField.SetValue("")
 
-        if username_input == "" or password_input == "":
-            print("must enter...")
-
+        if not 0 < len(username_input) <= 10 or not 0 < len(username_input) <= 10:
+            self.show_pop_up("Please enter a valid username and password.", "Error")
         else:
             msg2send = clientProtocol.pack_login_request(username_input, password_input)
             self.comm.send(msg2send)
 
-        # print(f"Username is: {username_input}")
-        # print(f"Password is: {password_input}")
-        #
-
-        #
-        # if username_input == "reef" and password_input == "123":
-        #     self.parent.change_screen(self, self.parent.files)
+    def show_pop_up(self, text, title):
+        dlg = wx.MessageDialog(self, text, title, wx.OK | wx.ICON_INFORMATION)
+        dlg.ShowModal()
+        dlg.Destroy()
 
 
 class FilesPanel(wx.Panel):
@@ -118,8 +128,8 @@ class FilesPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.login_control, ok_button)
 
     def login_control(self, event):
-
         self.parent.change_screen(self, self.parent.login)
+
 
 if __name__ == '__main__':
     app = wx.App()

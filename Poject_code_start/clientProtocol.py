@@ -62,7 +62,6 @@ def unpack_files_message(msg):
         # adding to list of branches
         branches.append((name_to_add, dirs, files))
 
-    print(branches)
     return branches
 
 
