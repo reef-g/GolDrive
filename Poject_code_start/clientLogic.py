@@ -3,7 +3,7 @@ import clientComm
 import clientProtocol
 import Settings
 import threading
-import graphics
+from Graphics import graphics
 from pubsub import pub
 
 
@@ -32,21 +32,21 @@ def _handle_messages(msg_q, recv_commands, frame):
 
 def _handle_registration(frame, status):
     if status == "0":
-        print("Registered")
+        pub.sendMessage("registerOk")
     else:
-        print("Didn't work", status)
+        print(status)
+        pub.sendMessage("registerNotOk")
     pass
 
 
 def _handle_login(frame, status):
     if status == "0":
         print("Logged in")
-        frame.main_panel.change_screen(frame.main_panel.login, frame.main_panel.files)
         pub.sendMessage("loginOk")
 
     if status == "1":
         pub.sendMessage("loginNotOk")
-    pass
+        pass
 
 
 def _handle_files_list(branches):

@@ -54,10 +54,9 @@ def pack_files_message(username):
     """
     files_of_user = "13"
     # the path to work at, will later to change to the person directory
-    path = fr"C:\Users\reefg\PycharmProjects\alpha"
+    path = fr"aa"
 
     for (dirname, dirs, files) in os.walk(path):
-        print(dirname)
         # removing the path so that its only the directories in the system and not from the server
         dirname = dirname[len(path) + 1::]
 
@@ -74,7 +73,6 @@ def pack_files_message(username):
 
         files_of_user += '\n'
 
-    print(files_of_user)
     return files_of_user
 
 

@@ -6,6 +6,7 @@ import Settings
 import DB
 import encryption
 
+
 def main_loop():
     """
     :return: the main loop of the server
