@@ -10,8 +10,8 @@ class MyFrame(wx.Frame):
         self.Maximize()
 
         # create status bar
-        self.CreateStatusBar(1)
-        self.SetStatusText("GolDrive by Reef Gold - 2024")
+        # self.CreateStatusBar(1)
+        # self.SetStatusText("GolDrive by Reef Gold - 2024")
         # create main panel - to put on the others panels
         self.main_panel = MainPanel(self, self.comm)
         box = wx.BoxSizer(wx.VERTICAL)
@@ -28,6 +28,7 @@ class MainPanel(wx.Panel):
         self.frame = parent
         self.comm = comm
         self.SetBackgroundColour(wx.LIGHT_GREY)
+        self.username = ""
         v_box = wx.BoxSizer()
         # create object for each panel
         self.login = LoginPanel(self, self.frame, self.comm)
@@ -42,8 +43,8 @@ class MainPanel(wx.Panel):
         self.SetSizer(v_box)
         self.Layout()
 
-    def change_screen(self, curScreen, screen):
-        curScreen.Hide()
+    def change_screen(self, cur_screen, screen):
+        cur_screen.Hide()
         screen.Show()
 
         self.Layout()
@@ -69,14 +70,14 @@ class LoginPanel(wx.Panel):
         title.SetForegroundColour(wx.BLACK)
         title.SetFont(font)
 
-        nameText = wx.StaticText(self, 1, label="Username: ", pos=(10, 40))
+        name_text = wx.StaticText(self, 1, label="Username: ", pos=(10, 40))
         self.nameField = wx.TextCtrl(self, -1, name="username", pos=(10, 60), size=(150, -1))
 
-        passText = wx.StaticText(self, 1, pos=(10, 90), label="Password: ")
+        pass_text = wx.StaticText(self, 1, pos=(10, 90), label="Password: ")
         self.passField = wx.TextCtrl(self, -1, name="password", pos=(10, 110), size=(150, -1), style=wx.TE_PASSWORD)
 
         pub.subscribe(self.login_ok, "loginOk")
-        pub.subscribe(self.login_notOk, "loginNotOk")
+        pub.subscribe(self.login_not_ok, "loginNotOk")
 
         ok_button = wx.Button(self, label="OK", pos=(15, 140))
         self.Bind(wx.EVT_BUTTON, self.on_ok, ok_button)
@@ -84,13 +85,16 @@ class LoginPanel(wx.Panel):
         register_button = wx.Button(self, label="REGISTER", pos=(100, 140))
         self.Bind(wx.EVT_BUTTON, self.register_control, register_button)
 
+        self.Hide()
+
     def register_control(self, event):
         self.parent.change_screen(self, self.parent.register)
 
     def login_ok(self):
+        self.parent.files.title.SetLabel(self.parent.username.upper())
         self.parent.change_screen(self, self.parent.files)
 
-    def login_notOk(self):
+    def login_not_ok(self):
         self.parent.show_pop_up("Wrong username or password entered.", "Error")
 
     def on_ok(self, event):
@@ -103,6 +107,7 @@ class LoginPanel(wx.Panel):
         if not 0 < len(username_input) <= 10 or not 0 < len(username_input) <= 10:
             self.parent.show_pop_up("Please enter a valid username and password.", "Error")
         else:
+            self.parent.username = username_input
             msg2send = clientProtocol.pack_login_request(username_input, password_input)
             self.comm.send(msg2send)
 
@@ -113,15 +118,33 @@ class FilesPanel(wx.Panel):
         self.frame = frame
         self.comm = comm
         self.parent = parent
-        self.SetBackgroundColour(wx.LIGHT_GREY)
 
-        title = wx.StaticText(self, -1, label="Files panel", pos=(0, 0))
-        titlefont = wx.Font(22, wx.DECORATIVE, wx.NORMAL, wx.NORMAL)
-        title.SetForegroundColour(wx.BLACK)
-        title.SetFont(titlefont)
+        # self.png = wx.StaticBitmap(self, -1, wx.Bitmap(r"C:\Users\talmid\Pictures\שקופית1.JPG", wx.BITMAP_TYPE_ANY))
+        sizer = wx.BoxSizer(wx.VERTICAL)
 
-        login_button = wx.Button(self, label="BACK TO LOGIN", pos=(30, 140))
+        self.title = wx.StaticText(self, -1)
+        titlefont = wx.Font(60, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, 0, "High tower text")
+        self.title.SetFont(titlefont)
+
+        sizer.Add(self.title, flag=wx.CentreX)
+
+        files_sizer = wx.BoxSizer(wx.VERTICAL)
+        file_box = wx.StaticBox(self, -1, size=(1670, 820))
+        files_sizer.Add(file_box, flag=wx.CENTER)
+
+        login_sizer = wx.BoxSizer(wx.VERTICAL)
+        login_button = wx.Button(self, label="BACK TO LOGIN")
         self.Bind(wx.EVT_BUTTON, self.login_control, login_button)
+        login_sizer.Add(login_button, wx.CENTER)
+
+        sizer.AddSpacer(20)
+
+        sizer.AddMany((files_sizer, login_sizer))
+
+        self.SetSizer(sizer)
+
+        self.Layout()
+        self.Hide()
 
     def login_control(self, event):
         self.parent.change_screen(self, self.parent.login)
@@ -143,13 +166,13 @@ class RegistrationPanel(wx.Panel):
         login_button = wx.Button(self, label="BACK TO LOGIN", pos=(10, 190))
         self.Bind(wx.EVT_BUTTON, self.login_control, login_button)
 
-        nameText = wx.StaticText(self, 1, label="UserName: ", pos=(10, 40))
+        name_text = wx.StaticText(self, 1, label="UserName: ", pos=(10, 40))
         self.nameField = wx.TextCtrl(self, -1, name="username", pos=(10, 60), size=(150, -1))
 
-        passText = wx.StaticText(self, 1, pos=(10, 90), label="Password: ")
+        pass_text = wx.StaticText(self, 1, pos=(10, 90), label="Password: ")
         self.passField = wx.TextCtrl(self, -1, name="password", pos=(10, 110), size=(150, -1), style=wx.TE_PASSWORD)
 
-        emailText = wx.StaticText(self, 1, pos=(10, 140), label="Email: ")
+        email_text = wx.StaticText(self, 1, pos=(10, 140), label="Email: ")
         self.emailField = wx.TextCtrl(self, -1, name="email", pos=(10, 160), size=(150, -1))
 
         pub.subscribe(self.register_ok, "registerOk")
@@ -189,5 +212,5 @@ class RegistrationPanel(wx.Panel):
 
 if __name__ == '__main__':
     app = wx.App()
-    frame = MyFrame(comm="")
+    frame1 = MyFrame(comm="")
     app.MainLoop()
