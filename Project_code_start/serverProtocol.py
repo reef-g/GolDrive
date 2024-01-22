@@ -54,7 +54,7 @@ def pack_files_message(username):
     """
     files_of_user = "13"
     # the path to work at, will later to change to the person directory
-    path = fr"aa"
+    path = fr"D:\!ReefGold\users_files\{username}"
 
     for (dirname, dirs, files) in os.walk(path):
         # removing the path so that its only the directories in the system and not from the server
@@ -72,6 +72,8 @@ def pack_files_message(username):
         files_of_user += str(len(files)).zfill(4) + files
 
         files_of_user += '\n'
+
+    print(files_of_user, 12312)
 
     return files_of_user
 

@@ -16,7 +16,7 @@ def main_loop():
     recv_commands = {"01": _handle_registration, "02": _handle_login}
     # used_port = []
 
-    main_server = serverComm.ServerComm(Settings.SERVERPORT, msg_q, 2)
+    main_server = serverComm.ServerComm(Settings.SERVERPORT, msg_q, 3)
     threading.Thread(target=_handle_messages, args=(main_server, msg_q, recv_commands, )).start()
 
 

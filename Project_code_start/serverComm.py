@@ -43,7 +43,7 @@ class ServerComm:
 
                 try:
                     data_len = int(currSocket.recv(self.msgLenBytes).decode())
-                    data = currSocket.recv(data_len).decode()
+                    data = currSocket.recv(data_len)
                     enc_obj = self.openClients[currSocket][1]
 
                     decrypted_data = enc_obj.dec_msg(data)
@@ -52,6 +52,7 @@ class ServerComm:
                     self._handle_disconnect(currSocket)
 
                 else:
+
                     if decrypted_data == "":
                         self._handle_disconnect(currSocket)
 
@@ -111,7 +112,6 @@ class ServerComm:
             if client:
                 enc_obj = self.openClients[client][1]
                 encrypt_data = enc_obj.enc_msg(data)
-
                 # the length of the encrypted message
                 data_len = str(len(encrypt_data)).zfill(self.msgLenBytes).encode()
                 try:

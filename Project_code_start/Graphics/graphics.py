@@ -1,4 +1,5 @@
 import wx
+import wx.lib.scrolledpanel
 from pubsub import pub
 import clientProtocol
 
@@ -120,34 +121,107 @@ class FilesPanel(wx.Panel):
         self.parent = parent
 
         # self.png = wx.StaticBitmap(self, -1, wx.Bitmap(r"C:\Users\talmid\Pictures\שקופית1.JPG", wx.BITMAP_TYPE_ANY))
-        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
 
+        self.title_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.title = wx.StaticText(self, -1)
         titlefont = wx.Font(60, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, 0, "High tower text")
         self.title.SetFont(titlefont)
 
-        sizer.Add(self.title, flag=wx.CentreX)
+        self.title_sizer.Add(self.title)
 
-        files_sizer = wx.BoxSizer(wx.VERTICAL)
-        file_box = wx.StaticBox(self, -1, size=(1670, 820))
-        files_sizer.Add(file_box, flag=wx.CENTER)
+        self.scroll_panel = wx.lib.scrolledpanel.ScrolledPanel(self, -1, size=(1670, 800), style=wx.SIMPLE_BORDER)
+        self.scroll_panel.SetupScrolling()
+        self.scroll_panel.SetBackgroundColour("white")
 
-        login_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.files_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.scroll_panel.SetSizer(self.files_sizer)
+
+        self.login_sizer = wx.BoxSizer(wx.VERTICAL)
         login_button = wx.Button(self, label="BACK TO LOGIN")
         self.Bind(wx.EVT_BUTTON, self.login_control, login_button)
-        login_sizer.Add(login_button, wx.CENTER)
+        self.login_sizer.AddSpacer(20)
+        self.login_sizer.Add(login_button)
 
-        sizer.AddSpacer(20)
+        self.sizer.AddMany([(self.title_sizer, 0, wx.CENTER),
+                            (self.scroll_panel, 0, wx.CENTER),
+                            (self.login_sizer, 0, wx.CENTER)])
 
-        sizer.AddMany((files_sizer, login_sizer))
+        self.SetSizer(self.sizer)
 
-        self.SetSizer(sizer)
+        pub.subscribe(self.initial_files_control, "filesOk")
 
         self.Layout()
         self.Hide()
 
     def login_control(self, event):
         self.parent.change_screen(self, self.parent.login)
+
+    def initial_files_control(self, branch):
+        dirs = branch[1]
+        files = branch[2]
+
+        for child in self.scroll_panel.GetChildren():
+            child.Destroy()
+
+        self.grid_sizer = wx.GridSizer(cols=15, hgap=10, vgap=10)
+
+        image_paths = [r"D:\!ReefGold\Project_code_start\Graphics\dirs_image.png",
+                       r"D:\!ReefGold\Project_code_start\Graphics\files_image.png"]
+
+        # Add items with corresponding images to the grid sizer
+        while dirs or files:
+            if dirs:
+                item = dirs.pop(0)
+                image_path = image_paths[0]
+            elif files:
+                item = files.pop(0)
+                image_path = image_paths[1]
+            else:
+                continue
+
+            item_sizer = wx.BoxSizer(wx.VERTICAL)
+
+
+            # Add image
+            item_image = wx.StaticBitmap(self.scroll_panel, -1, wx.Bitmap(image_path, wx.BITMAP_TYPE_ANY),
+                                         size=(100, 80), name=item)
+            item_image.Bind(wx.EVT_LEFT_DOWN, self.select_file)
+            item_sizer.Add(item_image, 0, wx.ALL)
+
+            # Add item text
+            item_text = wx.StaticText(self.scroll_panel, label=item, name=item)
+            item_text.Bind(wx.EVT_LEFT_DOWN, self.select_file)
+            item_sizer.Add(item_text, 0, wx.CENTER)
+
+            # Add item sizer to grid_sizer
+            self.grid_sizer.Add(item_sizer, 0, wx.CENTER)
+
+        # Set the grid sizer for the scrollable panel
+        self.files_sizer.Add(self.grid_sizer, 0, wx.TOP)
+
+        # Scroll to the top
+        self.scroll_panel.Scroll(0, 0)
+
+        # Refresh the layout
+        self.sizer.Layout()
+
+    def select_file(self, evt):
+        print("i am here")
+        obj = evt.GetEventObject()
+        parent = obj.GetParent().GetSizer()
+
+        print(obj.GetName())
+
+        # self.grid_sizer.Remove(parent)
+        #
+        # print(obj in parent.GetChildren())
+
+        self.sizer.Layout()
+
+
+
 
 
 class RegistrationPanel(wx.Panel):

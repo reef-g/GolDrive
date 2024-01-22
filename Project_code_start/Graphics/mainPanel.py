@@ -1,56 +1,47 @@
 import wx
-from Graphics import LoginPanel, RegistrationPanel, FilesPanel
+import wx.lib.scrolledpanel
+
+class GUI(wx.Frame):
+
+    def __init__(self, parent, id, title):
+        # First retrieve the screen size of the device
+        screenSize = wx.DisplaySize()
+        screenWidth = screenSize[0]
+        screenHeight = screenSize[1]
+
+        # Create a frame
+        wx.Frame.__init__(self, parent, id, title, size=screenSize, style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
+
+        panel1 = wx.Panel(self, size=(screenWidth, 28), pos=(0, 0), style=wx.SIMPLE_BORDER)
+        panel1.SetBackgroundColour('#FDDF99')
+        panel2 = wx.lib.scrolledpanel.ScrolledPanel(self, -1, size=(screenWidth, 400), pos=(0, 28),
+                                                    style=wx.SIMPLE_BORDER)
+        panel2.SetupScrolling()
+        panel2.SetBackgroundColour('#FFFFFF')
+
+        button1 = wx.Button(panel2, label="Button 1", pos=(0, 50), size=(50, 50))
+        button2 = wx.Button(panel2, label="Button 2", pos=(0, 100), size=(50, 50))
+        button3 = wx.Button(panel2, label="Button 3", pos=(0, 150), size=(50, 50))
+        button4 = wx.Button(panel2, label="Button 4", pos=(0, 200), size=(50, 50))
+        button5 = wx.Button(panel2, label="Button 5", pos=(0, 250), size=(50, 50))
+        button6 = wx.Button(panel2, label="Button 6", pos=(0, 300), size=(50, 50))
+        button7 = wx.Button(panel2, label="Button 7", pos=(0, 350), size=(50, 50))
+        button8 = wx.Button(panel2, label="Button 8", pos=(0, 400), size=(50, 50))
+
+        bSizer = wx.BoxSizer(wx.VERTICAL)
+        bSizer.Add(button1, 0, wx.ALL, 5)
+        bSizer.Add(button2, 0, wx.ALL, 5)
+        bSizer.Add(button3, 0, wx.ALL, 5)
+        bSizer.Add(button4, 0, wx.ALL, 5)
+        bSizer.Add(button5, 0, wx.ALL, 5)
+        bSizer.Add(button6, 0, wx.ALL, 5)
+        bSizer.Add(button7, 0, wx.ALL, 5)
+        bSizer.Add(button8, 0, wx.ALL, 5)
+        panel2.SetSizer(bSizer)
 
 
-class MyFrame(wx.Frame):
-    def __init__(self, comm, parent=None):
-        super(MyFrame, self).__init__(parent, title="GolDrive")
-        self.comm = comm
-        self.Maximize()
-
-        # create status bar
-        self.CreateStatusBar(1)
-        self.SetStatusText("GolDrive by Reef Gold - 2024")
-        # create main panel - to put on the others panels
-        self.main_panel = MainPanel(self, self.comm)
-        box = wx.BoxSizer(wx.VERTICAL)
-        box.Add(self.main_panel, 1, wx.EXPAND)
-        # arrange the frame
-        self.SetSizer(box)
-        self.Layout()
-        self.Show()
-
-
-class MainPanel(wx.Panel):
-    def __init__(self, parent, comm):
-        wx.Panel.__init__(self, parent)
-        self.frame = parent
-        self.comm = comm
-        self.SetBackgroundColour(wx.LIGHT_GREY)
-        v_box = wx.BoxSizer()
-        # create object for each panel
-        self.login = LoginPanel(self, self.frame, self.comm)
-        self.register = RegistrationPanel(self, self.frame, comm)
-        self.files = FilesPanel(self, self.frame, self.comm)
-
-        v_box.Add(self.login)
-        v_box.Add(self.register)
-        v_box.Add(self.files)
-        # The first panel to show
-        self.login.Show()
-        self.SetSizer(v_box)
-        self.Layout()
-
-    def change_screen(self, curScreen, screen):
-        curScreen.Hide()
-        screen.Show()
-
-        self.Layout()
-        self.Refresh()
-        self.Update()
-
-    def show_pop_up(self, text, title):
-        dlg = wx.MessageDialog(self, text, title, wx.OK | wx.ICON_INFORMATION)
-        dlg.ShowModal()
-        dlg.Destroy()
-
+if __name__ == '__main__':
+    app = wx.App()
+    frame = GUI(parent=None, id=-1, title="Test")
+    frame.Show()
+    app.MainLoop()

@@ -1,33 +1,64 @@
 import base64
-import random
 from Cryptodome.Cipher import AES
 from Cryptodome import Random
 import hashlib
+import random
+import chardet
 
 
-class Encryption:
+class Encryption(object):
     def __init__(self, key):
+        """
+
+        :param key:
+        """
         self.bs = AES.block_size
         self.key = hashlib.sha256(str(key).encode()).digest()
 
-    def enc_msg(self, msg):
-        msg = self._pad(msg)
+    def enc_msg(self, message):
+        """
+
+        :param message:
+        :return:
+        """
+        if type(message) == str:
+            message = message.encode()
+        raw = self._pad(message)
         iv = Random.new().read(AES.block_size)
         cipher = AES.new(self.key, AES.MODE_CBC, iv)
-        return base64.b64encode(iv + cipher.encrypt(msg.encode()))
+        return base64.b64encode(iv + cipher.encrypt(raw))
 
-    def dec_msg(self, msg):
-        enc = base64.b64decode(msg)
+    def dec_msg(self, encrypt_message):
+        """
+
+        :param encrypt_message:
+        :return:
+        """
+        enc = base64.b64decode(encrypt_message)
         iv = enc[:AES.block_size]
-        cipher = AES.new(self.key, AES.MODE_CBC, iv)
-        return Encryption._unpad(cipher.decrypt(enc[AES.block_size:])).decode('utf-8')
+        cipher = AES.new(self.key, AES.MODE_CBC,iv)
+        a = self._unpad(cipher.decrypt(enc[AES.block_size:]))
+        encoding = chardet.detect(a)
+        if encoding['encoding'] == "ascii":
+            a = a.decode()
+        return a
 
-    def _pad(self, s):
-        return s + (self.bs - len(s) % self.bs) * chr(self.bs - len(s) % self.bs)
+    def _pad(self, message):
+        """
+
+        :param message:
+        :return:
+        """
+        return message + (self.bs - len(message) % self.bs) * chr(self.bs - len(message) % self.bs).encode()
 
     @staticmethod
-    def _unpad(s):
-        return s[:-ord(s[len(s)-1:])]
+    def _unpad(message):
+        """
+
+        :param message:
+        :return:
+        """
+        return message[:-ord(message[len(message) - 1:])]
 
 
 def hash_msg(msg):
@@ -44,17 +75,50 @@ def create_symmetry_key(private_key, shared_key):
     return Encryption((shared_key ** private_key) % p)
 
 
-p = 7591
-g = 1307
+p = 7723
+g = 1229
 
 
 if __name__ == '__main__':
-    privateA, a = get_dh_factor()
-    privateB, b = get_dh_factor()
+    #server
+    a,A = get_dh_factor()
+    # send
+    # recv
+    print(len(str(A)))
 
-    cryptoA = create_symmetry_key(b, privateA)
-    cryptoB = create_symmetry_key(a, privateB)
-    msgToCrypt = "Geleo world"
-    enc1 = cryptoA.enc_msg(msgToCrypt)
+    # client
+    b,B = get_dh_factor()
+    # recv
+    # send
 
-    print(msgToCrypt, cryptoB.dec_msg(enc1))
+    keyServer = create_symmetry_key(a,B)
+    keyclient = create_symmetry_key(b,A)
+    print(keyclient.key)
+    print(keyServer.key)
+
+    with open (r"T:\public\יב\imri\projectCode\files\cat.jpg", 'rb') as f:
+        data = f.read()
+    print(data)
+    #data = "reef"
+    #print(type(data))
+
+    print(len(data))
+
+    encM = keyServer.enc_msg(data)
+    print(len(encM), type(encM))
+
+    decM = keyclient.dec_msg(encM)
+    print(decM)
+    # data , path = decM[:8532], decM[8532:]
+    # path.decode()
+    # print(path)
+    # print(len(decM))
+    #with open(fr"T:\public\יב\imri\projectCode\files\cat22.jpg", 'wb') as f:
+        #f.write(decM)
+    #with open(r"temp.jpg", 'wb') as f:
+        #f.write(decM)
+
+
+
+
+    #print(msg, encM, decM)
