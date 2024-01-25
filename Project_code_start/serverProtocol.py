@@ -73,8 +73,6 @@ def pack_files_message(username):
 
         files_of_user += '\n'
 
-    print(files_of_user, 12312)
-
     return files_of_user
 
 
@@ -187,4 +185,4 @@ if __name__ == '__main__':
     code, data_from_message = unpack_message("1210reef/reef1000012")
     dataa = pack_files_message("reef")
 
-    print(data_from_message)
+    print(dataa)
