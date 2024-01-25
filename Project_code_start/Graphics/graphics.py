@@ -183,6 +183,12 @@ class FilesPanel(wx.Panel):
         dirs = branch[1]
         files = branch[2]
 
+        if dirs == ['']:
+            dirs = []
+
+        if files == ['']:
+            files = []
+
         # for child in self.scroll_panel.GetChildren():
         #     child.Destroy()
 
