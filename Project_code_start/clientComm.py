@@ -29,14 +29,11 @@ class ClientComm:
         while True:
             try:
                 leng = self.socket.recv(self.msgLenBytes).decode()
-                print(leng)
                 data = self.socket.recv(int(leng))
-                print(data)
             except Exception as e:
                 sys.exit("Server is closed try again later")
 
             decrypted_data = self.enc_obj.dec_msg(data)
-            print(decrypted_data)
             self.recvQ.put(decrypted_data)
 
 

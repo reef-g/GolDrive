@@ -1,5 +1,7 @@
 import os
 
+import Settings
+
 
 def unpack_message(msg):
     """
@@ -49,16 +51,16 @@ def get_data_from_string(line, leng):
 
 def pack_files_message(username):
     """
-    :param username:
+    :param username: username of user
     :return: string with all files and directories of user in the drive
     """
     files_of_user = "13"
     # the path to work at, will later to change to the person directory
-    path = fr"D:\!ReefGold\users_files\{username}"
+    path = f"{Settings.USER_FILES_PATH}/{username}"
 
     for (dirname, dirs, files) in os.walk(path):
-        # removing the path so that its only the directories in the system and not from the server
-        dirname = dirname[len(path) + 1::]
+        # removing the path so that it's only the directories in the system and not from the server
+        dirname = dirname[len(path) + 1::].replace('\\', '/')
 
         # adding the length of the name and the name
         files_of_user += str(len(dirname)).zfill(2) + dirname
@@ -137,12 +139,13 @@ def pack_create_folder_response(response):
     return f"13{str(len(str(response))).zfill(2)}{response}"
 
 
-def pack_delete_response(response):
+def pack_delete_response(response, path):
     """
     :param response: response to file delete
+    :param path: the path deleted
     :return: opcode + length + response
     """
-    return f"10{str(len(str(response))).zfill(2)}{response}"
+    return f"10{str(len(str(response))).zfill(2)}{response}{str(len(str(path))).zfill(2)}{path}"
 
 
 def pack_share_response(response):

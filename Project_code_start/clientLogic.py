@@ -12,7 +12,7 @@ import wx
 def main_loop():
 
     msg_q = queue.Queue()
-    recv_commands = {"01": _handle_registration, "02": _handle_login, "13": _handle_send_files}
+    recv_commands = {"01": _handle_registration, "02": _handle_login, "10":_handle_delete_file, "13": _handle_send_files}
     client_socket = clientComm.ClientComm(Settings.SERVERIP, Settings.SERVERPORT, msg_q, 3)
 
     app = graphics.wx.App()
@@ -54,6 +54,14 @@ def _handle_login(status):
 
     else:
         wx.CallAfter(pub.sendMessage, "loginNotOk")
+
+
+def _handle_delete_file(status, name):
+    if status == "0":
+        wx.CallAfter(pub.sendMessage, "deleteOk", name=name)
+    if status == "1":
+        wx.CallAfter(pub.sendMessage, "deleteNotOk")
+
 
 
 def _handle_send_files(branches):

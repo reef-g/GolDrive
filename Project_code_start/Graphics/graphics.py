@@ -116,6 +116,7 @@ class LoginPanel(wx.Panel):
 class FilesPanel(wx.Panel):
     def __init__(self, parent, frame, comm):
         wx.Panel.__init__(self, parent, pos=wx.DefaultPosition, size=(1920, 1080), style=wx.SIMPLE_BORDER)
+        self.grid_sizer = None
         self.frame = frame
         self.comm = comm
         self.parent = parent
@@ -138,17 +139,19 @@ class FilesPanel(wx.Panel):
         self.scroll_panel.SetupScrolling()
         self.scroll_panel.SetBackgroundColour("white")
 
-        self.files_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.files_sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.scroll_panel.SetSizer(self.files_sizer)
 
-        self.login_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.login_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
         login_button = wx.Button(self, label="BACK TO LOGIN")
-        back_button = wx.Button(self, label="BACK")
-        self.Bind(wx.EVT_BUTTON, self.up_directory, back_button)
+        self.backButton = wx.Button(self, label="BACK")
+        self.Bind(wx.EVT_BUTTON, self.back_dir, self.backButton)
         self.Bind(wx.EVT_BUTTON, self.login_control, login_button)
-        self.login_sizer.AddSpacer(20)
         self.login_sizer.Add(login_button)
+        self.login_sizer.AddSpacer(20)
+        self.login_sizer.Add(self.backButton)
 
         self.sizer.AddMany([(self.title_sizer, 0, wx.CENTER),
                             (self.scroll_panel, 0, wx.CENTER),
@@ -157,17 +160,13 @@ class FilesPanel(wx.Panel):
         self.SetSizer(self.sizer)
 
         pub.subscribe(self._get_branches, "filesOk")
+        pub.subscribe(self._delete_obj, "deleteOk")
 
         self.Layout()
         self.Hide()
 
-    def up_directory(self, event):
-        pass
-
-
     def login_control(self, event):
         self.parent.change_screen(self, self.parent.login)
-
 
     def _get_branches(self, branches):
         self.branches = branches
@@ -175,13 +174,16 @@ class FilesPanel(wx.Panel):
         for branch in branches:
             if branch[0] == "":
                 self.curPath = ""
-                self.initial_files_control(branch)
+                self.show_files()
 
+    def show_files(self):
+        branch = ["", [], []]
+        for temp in self.branches:
+            if temp[0] == self.curPath:
+                branch = temp
 
-    def initial_files_control(self, branch):
-        print(branch)
-        dirs = branch[1]
-        files = branch[2]
+        dirs = branch[1][::]
+        files = branch[2][::]
 
         if dirs == ['']:
             dirs = []
@@ -196,8 +198,8 @@ class FilesPanel(wx.Panel):
 
         self.grid_sizer = wx.GridSizer(cols=15, hgap=10, vgap=10)
 
-        image_paths = [r"D:\!ReefGold\Project_code_start\Graphics\dirs_image.png",
-                       r"D:\!ReefGold\Project_code_start\Graphics\files_image.png"]
+        image_paths = [r"C:\Users\reefg\PycharmProjects\Project_code_start\Graphics\dirs_image.png",
+                       r"C:\Users\reefg\PycharmProjects\Project_code_start\Graphics\files_image.png"]
 
         # Add items with corresponding images to the grid sizer
         while dirs or files:
@@ -225,80 +227,78 @@ class FilesPanel(wx.Panel):
             item_text.Bind(wx.EVT_LEFT_DOWN, self.select_file)
             item_sizer.Add(item_text, 0, wx.CENTER)
 
-            self.filesObj[item] = (item_sizer, dir_file_flag)
+            self.filesObj[f"{self.curPath}/{item}".lstrip('/')] = (item_sizer, dir_file_flag)
 
             # Add item sizer to grid_sizer
             self.grid_sizer.Add(item_sizer, 0, wx.CENTER)
 
-
-
         # Set the grid sizer for the scrollable panel
         self.files_sizer.Add(self.grid_sizer, 0, wx.TOP)
-
-        self.scroll_panel.SetupScrolling()
 
         # Scroll to the top
         self.scroll_panel.Scroll(0, 0)
 
+        if self.curPath == "":
+            self.backButton.Hide()
+        else:
+            self.backButton.Show()
+
         # Refresh the layout
         self.sizer.Layout()
 
-    def select_file(self, evt):
-        obj = evt.GetEventObject()
-        parent = obj.GetContainingSizer()
+    def select_file(self, event):
+        obj = event.GetEventObject()
 
-        if self.filesObj[obj.GetName()][1]:
-            self._chose_dir(obj.GetName())
+        if self.filesObj[f"{self.curPath}/{obj.GetName()}".lstrip('/')][1]:
+            self.chose_dir(obj.GetName())
 
         else:
-            self._delete_obj(obj.GetName())
+            self._delete_file_request(obj.GetName())
 
-    def _chose_dir(self, name):
-       # wx.CallAfter(pub.sendMessage, "choseDir", name=name)
+    def chose_dir(self, name):
         self.curPath += f"/{name}"
         self.curPath = self.curPath.lstrip('/')
 
-        print(self.curPath, self.branches)
+        self.show_files()
+
+    def back_dir(self, event):
+        self.curPath = "/".join(self.curPath.split('/')[:-1])
+
+        self.show_files()
+
+    def _delete_file_request(self, name):
+        full_path = f"{self.curPath}/{name}".lstrip("/")
+        msg2send = clientProtocol.pack_delete_request(self.parent.username, full_path)
+        self.comm.send(msg2send)
+
+    def _delete_obj(self, name):
+        name = "/".join(name.split("/")[1::])
+        isDir = self.filesObj[name][1]
+        name = name.split("/")[-1]
 
         for branch in self.branches:
             if branch[0] == self.curPath:
-                print("found")
-                i = branch
-                self.initial_files_control(i)
+                if isDir:
+                    branch[1].remove(name)
+                else:
+                    branch[2].remove(name)
+                break
 
+        self.show_files()
 
-
-    def _delete_obj(self, name):
-        file_sizer = self.filesObj[name]
-        print(name)
-
-        # self.grid_sizer.Detach(file_sizer)
-        #
-        # print(self.grid_sizer.GetChildren())
-        #
-        # # print(file_sizer.GetChildren())
-        #
-        # # file_sizer.Destroy()
-        #
-        # # for child in file_sizer.GetChildren():
-        # #     child.Destroy()
-        #
-        # # file_sizer.Destroy()
-        #
-        # # Set the sizer again (if needed)
-
-        elements = []
-
-        for child in file_sizer.GetChildren():
-            elements.append(child.Window)
-
-        for element in elements:
-            if element:
-                element.Destroy()
-
-        self.scroll_panel.SetupScrolling()
-
-        self.Layout()
+    # def _delete_obj(self, name):
+    #     file_sizer = self.filesObj[name][0]
+    #
+    #     elements = []
+    #
+    #     for child in file_sizer.GetChildren():
+    #         elements.append(child.Window)
+    #
+    #     for element in elements:
+    #         if element:
+    #             element.Destroy()
+    #
+    #     self.Layout()
 
 
 class RegistrationPanel(wx.Panel):
