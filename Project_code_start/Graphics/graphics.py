@@ -161,6 +161,7 @@ class FilesPanel(wx.Panel):
 
         pub.subscribe(self._get_branches, "filesOk")
         pub.subscribe(self._delete_obj, "deleteOk")
+        pub.subscribe(self._rename_obj, "renameOk")
 
         self.Layout()
         self.Hide()
@@ -198,8 +199,8 @@ class FilesPanel(wx.Panel):
 
         self.grid_sizer = wx.GridSizer(cols=15, hgap=10, vgap=10)
 
-        image_paths = [r"C:\Users\reefg\PycharmProjects\Project_code_start\Graphics\dirs_image.png",
-                       r"C:\Users\reefg\PycharmProjects\Project_code_start\Graphics\files_image.png"]
+        image_paths = [r"D:\!ReefGold\Project_code_start\Graphics\dirs_image.png",
+                       r"D:\!ReefGold\Project_code_start\Graphics\files_image.png"]
 
         # Add items with corresponding images to the grid sizer
         while dirs or files:
@@ -219,13 +220,18 @@ class FilesPanel(wx.Panel):
             # Add image
             item_image = wx.StaticBitmap(self.scroll_panel, -1, wx.Bitmap(image_path, wx.BITMAP_TYPE_ANY),
                                          size=(100, 80), name=item)
-            item_image.Bind(wx.EVT_LEFT_DOWN, self.select_file)
             item_sizer.Add(item_image, 0, wx.ALL)
 
             # Add item text
             item_text = wx.StaticText(self.scroll_panel, label=item, name=item)
-            item_text.Bind(wx.EVT_LEFT_DOWN, self.select_file)
             item_sizer.Add(item_text, 0, wx.CENTER)
+
+            where_bind = wx.EVT_RIGHT_DOWN
+            if dir_file_flag:
+                where_bind = wx.EVT_LEFT_DOWN
+
+            item_text.Bind(where_bind, self.select_file)
+            item_image.Bind(where_bind, self.select_file)
 
             self.filesObj[f"{self.curPath}/{item}".lstrip('/')] = (item_sizer, dir_file_flag)
 
@@ -253,7 +259,7 @@ class FilesPanel(wx.Panel):
             self.chose_dir(obj.GetName())
 
         else:
-            self._delete_file_request(obj.GetName())
+            self.PopupMenu(PopMenu(self, name=obj.GetName()))
 
     def chose_dir(self, name):
         self.curPath += f"/{name}"
@@ -266,19 +272,24 @@ class FilesPanel(wx.Panel):
 
         self.show_files()
 
-    def _delete_file_request(self, name):
-        full_path = f"{self.curPath}/{name}".lstrip("/")
-        msg2send = clientProtocol.pack_delete_request(self.parent.username, full_path)
-        self.comm.send(msg2send)
+    def delete_file_request(self, name):
+        dlg = wx.MessageDialog(self, 'Do you want to delete?', 'Confirmation', wx.YES_NO | wx.ICON_QUESTION)
+        result = dlg.ShowModal()
+        dlg.Destroy()
+
+        if result == wx.ID_YES:
+            full_path = f"{self.parent.username}/{self.curPath}/{name}".lstrip("/")
+            msg2send = clientProtocol.pack_delete_request(full_path)
+            self.comm.send(msg2send)
 
     def _delete_obj(self, name):
         name = "/".join(name.split("/")[1::])
-        isDir = self.filesObj[name][1]
+        is_dir = self.filesObj[name][1]
         name = name.split("/")[-1]
 
         for branch in self.branches:
             if branch[0] == self.curPath:
-                if isDir:
+                if is_dir:
                     branch[1].remove(name)
                 else:
                     branch[2].remove(name)
@@ -286,19 +297,34 @@ class FilesPanel(wx.Panel):
 
         self.show_files()
 
-    # def _delete_obj(self, name):
-    #     file_sizer = self.filesObj[name][0]
-    #
-    #     elements = []
-    #
-    #     for child in file_sizer.GetChildren():
-    #         elements.append(child.Window)
-    #
-    #     for element in elements:
-    #         if element:
-    #             element.Destroy()
-    #
-    #     self.Layout()
+    def rename_file_request(self, name):
+        dlg = wx.TextEntryDialog(self, 'Do you want to delete?', 'Confirmation', '')
+        result = dlg.ShowModal()
+        dlg.Destroy()
+
+        if result == wx.ID_OK:
+            full_path = f"{self.parent.username}/{self.curPath}/{name}".lstrip("/")
+            msg2send = clientProtocol.pack_rename_file_request(full_path, result)
+            self.comm.send(msg2send)
+
+    def _rename_obj(self, name, new_name):
+        name = "/".join(name.split("/")[1::])
+        is_dir = self.filesObj[name][1]
+        name = name.split("/")[-1]
+
+        for branch in self.branches:
+            if branch[0] == self.curPath:
+                if is_dir:
+                    index_to_replace = branch[1].index(name)
+
+                    branch[1][index_to_replace] = new_name
+                else:
+                    index_to_replace = branch[2].index(name)
+
+                    branch[2][index_to_replace] = new_name
+                break
+
+        self.show_files()
 
 
 class RegistrationPanel(wx.Panel):
@@ -359,6 +385,45 @@ class RegistrationPanel(wx.Panel):
 
     def register_not_ok(self):
         self.parent.show_pop_up("User already exists.", "Error")
+
+
+class PopMenu(wx.Menu):
+
+    def __init__(self, parent, name):
+        super(PopMenu, self).__init__()
+
+        self.parent = parent
+        self.name = name
+
+        static_text_item = wx.MenuItem(self, -1, name)
+        # Make it non-selectable
+        static_text_item.Enable(False)
+        self.Append(static_text_item)
+
+        self.AppendSeparator()
+
+        # menu item 1
+        popmenu = wx.MenuItem(self, -1, 'delete file')
+        self.Append(popmenu)
+
+        # menu item 2
+        popmenu2 = wx.MenuItem(self, -1, 'rename file')
+        self.Append(popmenu2)
+
+        # Bind the menu item click event
+        self.Bind(wx.EVT_MENU, self.on_menu_item_click)
+
+    def on_menu_item_click(self, event):
+        clicked_item_id = event.GetId()
+        clicked_item = self.FindItemById(clicked_item_id)
+
+        # {"delete file": self.parent._delete_file_request}
+
+        item = clicked_item.GetText()
+        if item == "delete file":
+            self.parent.delete_file_request(self.name)
+        elif item == "rename file":
+            self.parent.rename_file_request(self.name)
 
 
 if __name__ == '__main__':

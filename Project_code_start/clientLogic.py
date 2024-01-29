@@ -59,9 +59,11 @@ def _handle_login(status):
 def _handle_delete_file(status, name):
     if status == "0":
         wx.CallAfter(pub.sendMessage, "deleteOk", name=name)
-    if status == "1":
-        wx.CallAfter(pub.sendMessage, "deleteNotOk")
 
+
+def _handle_rename_file(status, name, new_name):
+    if status == "0":
+        wx.CallAfter(pub.sendMessage, "renameOk", name=name, new_name=new_name)
 
 
 def _handle_send_files(branches):

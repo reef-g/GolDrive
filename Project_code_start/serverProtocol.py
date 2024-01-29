@@ -147,6 +147,13 @@ def pack_delete_response(response, path):
     """
     return f"10{str(len(str(response))).zfill(2)}{response}{str(len(str(path))).zfill(2)}{path}"
 
+def pack_rename_file_response(response, name, new_name):
+    """
+    :param response: response to file delete
+    :param path: the path deleted
+    :return: opcode + length + response
+    """
+    return f"10{str(len(str(response))).zfill(2)}{response}{str(len(str(name))).zfill(2)}{name}{str(len(str(new_name))).zfill(2)}{new_name}"
 
 def pack_share_response(response):
     """

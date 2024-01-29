@@ -133,13 +133,12 @@ def pack_create_folder_request(path):
     return f"13{str(len(path)).zfill(2)}{path}"
 
 
-def pack_delete_request(username, path):
+def pack_delete_request(path):
     """
-    :param username: username of user
     :param path: path of file to delete
     :return: message built py protocol
     """""
-    return f"10{str(len(f'{username}/{path}')).zfill(2)}{f'{username}/{path}'}"
+    return f"10{str(len(path)).zfill(2)}{path}"
 
 
 def pack_rename_file_request(path, new_name):
@@ -148,6 +147,7 @@ def pack_rename_file_request(path, new_name):
     :param new_name: new name of file
     :return: message built py protocol
     """
+    print(path, new_name)
     return f"08{str(len(path)).zfill(2)}{path}{str(len(new_name)).zfill(2)}{new_name}"
 
 

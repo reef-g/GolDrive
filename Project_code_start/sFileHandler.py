@@ -2,18 +2,33 @@ import os
 
 
 def rename_file(path, new_name):
+    status = 1
     if os.path.exists(path):
-        os.path.dirname(path)
-        os.rename(path, os.path.dirname(path) + '/' + new_name)
+        try:
+            os.path.dirname(path)
+            os.rename(path, os.path.dirname(path) + '/' + new_name)
+            status = 0
+        except Exception as e:
+            print(str(e))
     else:
         print("Isn't a file")
+
+    return status
 
 
 def delete_file(path):
+    status = 1
     if os.path.exists(path):
-        os.remove(path)
+        try:
+            os.remove(path)
+            status = 0
+            print("Deleted file at - " + path)
+        except Exception as e:
+            print(str(e))
     else:
         print("Isn't a file")
+
+    return status
 
 
 if __name__ == '__main__':

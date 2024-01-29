@@ -15,7 +15,7 @@ def main_loop():
     """
     # will be the database object later
     msg_q = queue.Queue()
-    recv_commands = {"01": _handle_registration, "02": _handle_login, "10": _handle_delete_file}
+    recv_commands = {"01": _handle_registration, "02": _handle_login, "08": _handle_rename_file, "10": _handle_delete_file}
     # used_port = []
 
     main_server = serverComm.ServerComm(Settings.SERVERPORT, msg_q, 3)
@@ -93,6 +93,25 @@ def _handle_delete_file(main_server, db, client_ip, path):
         path_to_send = path
 
     msg = serverProtocol.pack_delete_response(status, path_to_send)
+    main_server.send(client_ip, msg)
+
+
+def _handle_rename_file(main_server, db, client_ip, path, new_name):
+    """
+    :param main_server:
+    :param db:
+    :param client_ip:
+    :param name:
+    :param new_name:
+    :return:
+    """
+
+    status = sFileHandler.rename_file(f"{Settings.USER_FILES_PATH}/{path}", new_name)
+    what_to_send = ()
+    if status == 0:
+        what_to_send = (path, new_name)
+
+    msg = serverProtocol.pack_delete_response(status, what_to_send)
     main_server.send(client_ip, msg)
 
 
