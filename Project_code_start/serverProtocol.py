@@ -110,9 +110,9 @@ def pack_forgot_password_response(response):
     return f"07{str(len(str(response))).zfill(2)}{response}"
 
 
-def pack_file_download_response():
+def pack_file_download_response(response, data):
     # download file response
-    return "11"
+    return f"11{str(len(str(response))).zfill(2)}{response}{str(len(str(data))).zfill(2)}{data}"
 
 
 def pack_upload_port_response(response):
@@ -139,21 +139,24 @@ def pack_create_folder_response(response):
     return f"13{str(len(str(response))).zfill(2)}{response}"
 
 
-def pack_delete_response(response, path):
+def pack_delete_response(response):
     """
     :param response: response to file delete
     :param path: the path deleted
     :return: opcode + length + response
     """
-    return f"10{str(len(str(response))).zfill(2)}{response}{str(len(str(path))).zfill(2)}{path}"
+    return f"10{str(len(str(response))).zfill(2)}{response}"
 
-def pack_rename_file_response(response, name, new_name):
+
+def pack_rename_file_response(response, new_name):
     """
     :param response: response to file delete
     :param path: the path deleted
+    :param new_name: the name of the file
     :return: opcode + length + response
     """
-    return f"10{str(len(str(response))).zfill(2)}{response}{str(len(str(name))).zfill(2)}{name}{str(len(str(new_name))).zfill(2)}{new_name}"
+    return f"08{str(len(str(response))).zfill(2)}{response}{str(len(str(new_name))).zfill(2)}{new_name}"
+
 
 def pack_share_response(response):
     """

@@ -3,10 +3,11 @@ def unpack_message(msg):
     :param msg: message to unpack
     :return: tuple with opcode and variables
     """
+    print(msg)
     opcode = msg[:2]
     msg = msg[2:]
     data_from_msg = []
-
+    print(msg)
     if opcode == "13":
         data_from_msg = unpack_files_message(msg)
 
@@ -147,7 +148,6 @@ def pack_rename_file_request(path, new_name):
     :param new_name: new name of file
     :return: message built py protocol
     """
-    print(path, new_name)
     return f"08{str(len(path)).zfill(2)}{path}{str(len(new_name)).zfill(2)}{new_name}"
 
 

@@ -132,7 +132,7 @@ class FilesPanel(wx.Panel):
         self.title_sizer.Add(self.title)
 
         self.curPath = None
-
+        self.file_name = ""
         self.filesObj = {}
 
         self.scroll_panel = wx.lib.scrolledpanel.ScrolledPanel(self, -1, size=(1670, 800), style=wx.SIMPLE_BORDER)
@@ -162,6 +162,7 @@ class FilesPanel(wx.Panel):
         pub.subscribe(self._get_branches, "filesOk")
         pub.subscribe(self._delete_obj, "deleteOk")
         pub.subscribe(self._rename_obj, "renameOk")
+        pub.subscribe(self._download_object, "downloadOk")
 
         self.Layout()
         self.Hide()
@@ -199,8 +200,8 @@ class FilesPanel(wx.Panel):
 
         self.grid_sizer = wx.GridSizer(cols=15, hgap=10, vgap=10)
 
-        image_paths = [r"D:\!ReefGold\Project_code_start\Graphics\dirs_image.png",
-                       r"D:\!ReefGold\Project_code_start\Graphics\files_image.png"]
+        image_paths = [r"C:\Users\reefg\PycharmProjects\Project_code_start\Graphics\dirs_image.png",
+                       r"C:\Users\reefg\PycharmProjects\Project_code_start\Graphics\files_image.png"]
 
         # Add items with corresponding images to the grid sizer
         while dirs or files:
@@ -278,53 +279,78 @@ class FilesPanel(wx.Panel):
         dlg.Destroy()
 
         if result == wx.ID_YES:
-            full_path = f"{self.parent.username}/{self.curPath}/{name}".lstrip("/")
+            self.file_name = name
+            full_path = f"{self.parent.username}/{self.curPath}/{self.file_name}".lstrip("/")
             msg2send = clientProtocol.pack_delete_request(full_path)
             self.comm.send(msg2send)
 
-    def _delete_obj(self, name):
-        name = "/".join(name.split("/")[1::])
-        is_dir = self.filesObj[name][1]
-        name = name.split("/")[-1]
+    def _delete_obj(self):
+        is_dir = self.filesObj[f"{self.curPath}/{self.file_name}"][1]
 
         for branch in self.branches:
             if branch[0] == self.curPath:
                 if is_dir:
-                    branch[1].remove(name)
+                    branch[1].remove(self.file_name)
                 else:
-                    branch[2].remove(name)
+                    branch[2].remove(self.file_name)
                 break
 
+        self.parent.show_pop_up(f"Deleted {self.file_name} successfully.", "Success")
         self.show_files()
 
     def rename_file_request(self, name):
-        dlg = wx.TextEntryDialog(self, 'Do you want to delete?', 'Confirmation', '')
+        dlg = wx.TextEntryDialog(self, f'Do you want to rename {name}?', 'Confirmation', '')
         result = dlg.ShowModal()
         dlg.Destroy()
 
         if result == wx.ID_OK:
+            self.file_name = name
             full_path = f"{self.parent.username}/{self.curPath}/{name}".lstrip("/")
-            msg2send = clientProtocol.pack_rename_file_request(full_path, result)
+            msg2send = clientProtocol.pack_rename_file_request(full_path, dlg.GetValue())
             self.comm.send(msg2send)
 
-    def _rename_obj(self, name, new_name):
-        name = "/".join(name.split("/")[1::])
-        is_dir = self.filesObj[name][1]
-        name = name.split("/")[-1]
+    def _rename_obj(self, new_name):
+        is_dir = self.filesObj[f"{self.curPath}/{self.file_name}"][1]
 
         for branch in self.branches:
             if branch[0] == self.curPath:
                 if is_dir:
-                    index_to_replace = branch[1].index(name)
+                    index_to_replace = branch[1].index(self.file_name)
 
                     branch[1][index_to_replace] = new_name
                 else:
-                    index_to_replace = branch[2].index(name)
+                    index_to_replace = branch[2].index(self.file_name)
 
                     branch[2][index_to_replace] = new_name
                 break
 
+        self.parent.show_pop_up(f"Renamed {self.file_name} to {new_name} successfully.", "Success")
         self.show_files()
+
+    def download_file_request(self, file_name):
+        self.file_name = file_name
+        msg2send = clientProtocol.pack_file_download_request(f"{self.parent.username}/{self.curPath}/{self.file_name}")
+        self.comm.send(msg2send)
+
+    def _download_object(self, data):
+        print(data, type(data))
+        dlg = wx.DirDialog(self, "Choose a file", style=wx.DD_DEFAULT_STYLE)
+        result = dlg.ShowModal()
+
+        if result == wx.ID_OK:
+            selected_path = dlg.GetPath().replace('\\', '/')
+            print(f"Selected path: {selected_path}")
+
+            try:
+                with open(f"{selected_path}/{self.file_name}", 'wb') as f:
+                    type(data)
+                    f.write(data)
+                    self.parent.show_pop_up(f"Downloaded {self.file_name} to {selected_path} successfully.", "Success")
+
+            except Exception as e:
+                print(str(e))
+
+        dlg.Destroy()
 
 
 class RegistrationPanel(wx.Panel):
@@ -402,13 +428,14 @@ class PopMenu(wx.Menu):
 
         self.AppendSeparator()
 
-        # menu item 1
-        popmenu = wx.MenuItem(self, -1, 'delete file')
-        self.Append(popmenu)
+        delete_item = wx.MenuItem(self, -1, 'delete file')
+        self.Append(delete_item)
 
-        # menu item 2
-        popmenu2 = wx.MenuItem(self, -1, 'rename file')
-        self.Append(popmenu2)
+        rename_item = wx.MenuItem(self, -1, 'rename file')
+        self.Append(rename_item)
+
+        download_item = wx.MenuItem(self, -1, 'download file')
+        self.Append(download_item)
 
         # Bind the menu item click event
         self.Bind(wx.EVT_MENU, self.on_menu_item_click)
@@ -417,13 +444,13 @@ class PopMenu(wx.Menu):
         clicked_item_id = event.GetId()
         clicked_item = self.FindItemById(clicked_item_id)
 
-        # {"delete file": self.parent._delete_file_request}
-
-        item = clicked_item.GetText()
+        item = clicked_item.GetItemLabelText()
         if item == "delete file":
             self.parent.delete_file_request(self.name)
         elif item == "rename file":
             self.parent.rename_file_request(self.name)
+        elif item == "download file":
+            self.parent.download_file_request(self.name)
 
 
 if __name__ == '__main__':

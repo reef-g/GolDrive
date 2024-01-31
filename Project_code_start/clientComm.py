@@ -34,8 +34,12 @@ class ClientComm:
                 sys.exit("Server is closed try again later")
 
             decrypted_data = self.enc_obj.dec_msg(data)
-            self.recvQ.put(decrypted_data)
 
+            if self.port == Settings.SERVERPORT:
+                self.recvQ.put(decrypted_data)
+            else:
+                file_name, file_len = clientProtocol.unpack_message(decrypted_data)
+                self._recv_file(file_name, file_len)
 
     def _change_key(self):
         privateA, a = encryption.get_dh_factor()
@@ -64,6 +68,23 @@ class ClientComm:
 
     def _close(self):
         self.socket.close()
+
+    def _recv_file(self, client, file_name, file_len):
+        data = bytearray()
+        try:
+            while len(data) < file_len:
+                slices = file_len - len(data)
+                if slices > 1024:
+                    data.extend(client.recv(1024))
+                else:
+                    data.extend(client.recv(slices))
+                    break
+        except Exception as e:
+            self.recvQ.put(("fail", file_name))
+            print("main server in recv file comm ", str(e))
+            self._close()
+        else:
+            self.recvQ.put(("success", file_name, data))
 
 
 if __name__ == "__main__":

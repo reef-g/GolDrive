@@ -1,6 +1,8 @@
 import os.path
 import queue
 import threading
+
+import clientComm
 import serverComm
 import serverProtocol
 import Settings
@@ -15,10 +17,10 @@ def main_loop():
     """
     # will be the database object later
     msg_q = queue.Queue()
-    recv_commands = {"01": _handle_registration, "02": _handle_login, "08": _handle_rename_file, "10": _handle_delete_file}
+    recv_commands = {"01": _handle_registration, "02": _handle_login, "08": _handle_rename_file, "10": _handle_delete_file, "11": _handle_downoad_file}
     # used_port = []
 
-    main_server = serverComm.ServerComm(Settings.SERVERPORT, msg_q, 3)
+    main_server = serverComm.ServerComm(Settings.SERVERPORT, msg_q, 4)
     threading.Thread(target=_handle_messages, args=(main_server, msg_q, recv_commands, )).start()
 
 
@@ -86,13 +88,8 @@ def _handle_delete_file(main_server, db, client_ip, path):
     :return:
     """
 
-    path_to_send = ""
-
     status = sFileHandler.delete_file(f"{Settings.USER_FILES_PATH}/{path}")
-    if status == 0:
-        path_to_send = path
-
-    msg = serverProtocol.pack_delete_response(status, path_to_send)
+    msg = serverProtocol.pack_delete_response(status)
     main_server.send(client_ip, msg)
 
 
@@ -107,11 +104,21 @@ def _handle_rename_file(main_server, db, client_ip, path, new_name):
     """
 
     status = sFileHandler.rename_file(f"{Settings.USER_FILES_PATH}/{path}", new_name)
-    what_to_send = ()
-    if status == 0:
-        what_to_send = (path, new_name)
+    msg = serverProtocol.pack_rename_file_response(status, new_name)
+    main_server.send(client_ip, msg)
 
-    msg = serverProtocol.pack_delete_response(status, what_to_send)
+
+def _handle_downoad_file(main_server, db, client_ip, path):
+    """
+    :param main_server:
+    :param db:
+    :param client_ip:
+    :param path:
+    :return:
+    """
+
+    status, data = sFileHandler.download_file(f"{Settings.USER_FILES_PATH}/{path}")
+    msg = serverProtocol.pack_file_download_response(status, data)
     main_server.send(client_ip, msg)
 
 
