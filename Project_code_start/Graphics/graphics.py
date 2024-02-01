@@ -44,6 +44,8 @@ class MainPanel(wx.Panel):
         self.SetSizer(v_box)
         self.Layout()
 
+        pub.subscribe(self.show_pop_up, "showPopUp")
+
     def change_screen(self, cur_screen, screen):
         cur_screen.Hide()
         screen.Show()
@@ -78,7 +80,6 @@ class LoginPanel(wx.Panel):
         self.passField = wx.TextCtrl(self, -1, name="password", pos=(10, 110), size=(150, -1), style=wx.TE_PASSWORD)
 
         pub.subscribe(self.login_ok, "loginOk")
-        pub.subscribe(self.login_not_ok, "loginNotOk")
 
         ok_button = wx.Button(self, label="OK", pos=(15, 140))
         self.Bind(wx.EVT_BUTTON, self.on_ok, ok_button)
@@ -94,9 +95,6 @@ class LoginPanel(wx.Panel):
     def login_ok(self):
         self.parent.files.title.SetLabel(self.parent.username.upper())
         self.parent.change_screen(self, self.parent.files)
-
-    def login_not_ok(self):
-        self.parent.show_pop_up("Wrong username or password entered.", "Error")
 
     def on_ok(self, event):
         username_input = self.nameField.GetValue()
@@ -120,6 +118,7 @@ class FilesPanel(wx.Panel):
         self.frame = frame
         self.comm = comm
         self.parent = parent
+        self.files_comm = None
 
         # self.png = wx.StaticBitmap(self, -1, wx.Bitmap(r"C:\Users\talmid\Pictures\שקופית1.JPG", wx.BITMAP_TYPE_ANY))
         self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -147,11 +146,15 @@ class FilesPanel(wx.Panel):
 
         login_button = wx.Button(self, label="BACK TO LOGIN")
         self.backButton = wx.Button(self, label="BACK")
+        self.uploadButton = wx.Button(self, label="UPLOAD FILE")
         self.Bind(wx.EVT_BUTTON, self.back_dir, self.backButton)
         self.Bind(wx.EVT_BUTTON, self.login_control, login_button)
+        self.Bind(wx.EVT_BUTTON, self.upload_file_request, self.uploadButton)
         self.login_sizer.Add(login_button)
         self.login_sizer.AddSpacer(20)
         self.login_sizer.Add(self.backButton)
+        self.login_sizer.AddSpacer(20)
+        self.login_sizer.Add(self.uploadButton)
 
         self.sizer.AddMany([(self.title_sizer, 0, wx.CENTER),
                             (self.scroll_panel, 0, wx.CENTER),
@@ -163,9 +166,13 @@ class FilesPanel(wx.Panel):
         pub.subscribe(self._delete_obj, "deleteOk")
         pub.subscribe(self._rename_obj, "renameOk")
         pub.subscribe(self._download_object, "downloadOk")
+        pub.subscribe(self._files_comm_update, "update_file_comm")
 
         self.Layout()
         self.Hide()
+
+    def _files_comm_update(self, filecomm):
+        self.files_comm = filecomm
 
     def login_control(self, event):
         self.parent.change_screen(self, self.parent.login)
@@ -193,15 +200,12 @@ class FilesPanel(wx.Panel):
         if files == ['']:
             files = []
 
-        # for child in self.scroll_panel.GetChildren():
-        #     child.Destroy()
-
         self.scroll_panel.DestroyChildren()
 
         self.grid_sizer = wx.GridSizer(cols=15, hgap=10, vgap=10)
 
-        image_paths = [r"C:\Users\reefg\PycharmProjects\Project_code_start\Graphics\dirs_image.png",
-                       r"C:\Users\reefg\PycharmProjects\Project_code_start\Graphics\files_image.png"]
+        image_paths = [r"D:\!ReefGold\Project_code_start\Graphics\dirs_image.png",
+                       r"D:\!ReefGold\Project_code_start\Graphics\files_image.png"]
 
         # Add items with corresponding images to the grid sizer
         while dirs or files:
@@ -221,10 +225,11 @@ class FilesPanel(wx.Panel):
             # Add image
             item_image = wx.StaticBitmap(self.scroll_panel, -1, wx.Bitmap(image_path, wx.BITMAP_TYPE_ANY),
                                          size=(100, 80), name=item)
+
             item_sizer.Add(item_image, 0, wx.ALL)
 
             # Add item text
-            item_text = wx.StaticText(self.scroll_panel, label=item, name=item)
+            item_text = wx.StaticText(self.scroll_panel, label=item[:10] + "..." if len(item) > 13 else item, name=item)
             item_sizer.Add(item_text, 0, wx.CENTER)
 
             where_bind = wx.EVT_RIGHT_DOWN
@@ -295,8 +300,8 @@ class FilesPanel(wx.Panel):
                     branch[2].remove(self.file_name)
                 break
 
-        self.parent.show_pop_up(f"Deleted {self.file_name} successfully.", "Success")
         self.show_files()
+        self.parent.show_pop_up(f"Deleted {self.file_name} successfully.", "Success")
 
     def rename_file_request(self, name):
         dlg = wx.TextEntryDialog(self, f'Do you want to rename {name}?', 'Confirmation', '')
@@ -324,33 +329,41 @@ class FilesPanel(wx.Panel):
                     branch[2][index_to_replace] = new_name
                 break
 
-        self.parent.show_pop_up(f"Renamed {self.file_name} to {new_name} successfully.", "Success")
         self.show_files()
+        self.parent.show_pop_up(f"Renamed {self.file_name} to {new_name} successfully.", "Success")
 
     def download_file_request(self, file_name):
         self.file_name = file_name
         msg2send = clientProtocol.pack_file_download_request(f"{self.parent.username}/{self.curPath}/{self.file_name}")
-        self.comm.send(msg2send)
+        self.files_comm.send(msg2send)
 
     def _download_object(self, data):
-        print(data, type(data))
         dlg = wx.DirDialog(self, "Choose a file", style=wx.DD_DEFAULT_STYLE)
         result = dlg.ShowModal()
 
         if result == wx.ID_OK:
             selected_path = dlg.GetPath().replace('\\', '/')
-            print(f"Selected path: {selected_path}")
 
             try:
-                with open(f"{selected_path}/{self.file_name}", 'wb') as f:
-                    type(data)
+                with open(f"{selected_path}/{self.file_name}", 'wb' if type(data) == bytes else 'w') as f:
                     f.write(data)
-                    self.parent.show_pop_up(f"Downloaded {self.file_name} to {selected_path} successfully.", "Success")
+                self.parent.show_pop_up(f"Downloaded {self.file_name} to {selected_path} successfully.", "Success")
 
             except Exception as e:
+                self.parent.show_pop_up(f"Download failed, try again.", "Error")
                 print(str(e))
+                print("Error here")
 
         dlg.Destroy()
+
+    def upload_file_request(self, event):
+        dlg = wx.FileDialog(self, "Choose a file", style=wx.DD_DEFAULT_STYLE)
+        result = dlg.ShowModal()
+
+        if result == wx.ID_OK:
+            selected_path = dlg.GetPath().replace('\\', '/')
+
+            self.files_comm.send_file(selected_path)
 
 
 class RegistrationPanel(wx.Panel):
@@ -379,7 +392,6 @@ class RegistrationPanel(wx.Panel):
         self.emailField = wx.TextCtrl(self, -1, name="email", pos=(10, 160), size=(150, -1))
 
         pub.subscribe(self.register_ok, "registerOk")
-        pub.subscribe(self.register_not_ok, "registerNotOk")
 
         register_button = wx.Button(self, label="REGISTER", pos=(120, 190))
         self.Bind(wx.EVT_BUTTON, self.on_register, register_button)
@@ -408,9 +420,6 @@ class RegistrationPanel(wx.Panel):
     def register_ok(self):
         self.parent.change_screen(self, self.parent.login)
         self.parent.show_pop_up("User created successfully.", "Message")
-
-    def register_not_ok(self):
-        self.parent.show_pop_up("User already exists.", "Error")
 
 
 class PopMenu(wx.Menu):

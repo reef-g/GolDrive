@@ -13,23 +13,17 @@ def unpack_message(msg):
     data_from_msg = []
     msg = msg[2:]
 
-    if opcode == "12":
-        leng = msg[:2]
-        msg = msg[2:]
-        data_from_msg.append(msg[:int(leng)])
-        msg = msg[int(leng):]
-        data_from_msg.append(msg[:])
+    print(msg, 12345)
 
-    else:
-        while len(msg) > 0:
-            try:
-                data, msg = get_data_from_string(msg, 2)
-                data_from_msg.append(data)
+    while len(msg) > 0:
+        try:
+            data, msg = get_data_from_string(msg, 2)
+            data_from_msg.append(data)
 
-            except Exception as e:
-                print("in unpack_message -", str(e))
-                opcode = None
-                break
+        except Exception as e:
+            print("in unpack_message -", str(e))
+            opcode = None
+            break
 
     return opcode, data_from_msg
 
@@ -110,17 +104,17 @@ def pack_forgot_password_response(response):
     return f"07{str(len(str(response))).zfill(2)}{response}"
 
 
-def pack_file_download_response(response, data):
+def pack_file_download_response(response, datalen):
     # download file response
-    return f"11{str(len(str(response))).zfill(2)}{response}{str(len(str(data))).zfill(2)}{data}"
+    return f"11{str(len(str(response))).zfill(2)}{response}{str(len(str(datalen))).zfill(2)}{datalen}"
 
 
-def pack_upload_port_response(response):
+def pack_upload_port(port):
     """
-    :param response: response to upload port
+    :param port: upload port
     return: opcode + length + response
     """
-    return f"16{str(len(str(response))).zfill(2)}{response}"
+    return f"16{str(len(str(port))).zfill(2)}{port}"
 
 
 def pack_file_upload_response(response):

@@ -3,11 +3,9 @@ def unpack_message(msg):
     :param msg: message to unpack
     :return: tuple with opcode and variables
     """
-    print(msg)
     opcode = msg[:2]
     msg = msg[2:]
     data_from_msg = []
-    print(msg)
     if opcode == "13":
         data_from_msg = unpack_files_message(msg)
 
@@ -110,20 +108,13 @@ def pack_file_download_request(path):
     return f"11{str(len(path)).zfill(2)}{path}"
 
 
-def pack_upload_port_request():
-    """
-    :return: message built py protocol
-    """
-    return f"16"
-
-
-def pack_upload_file_request(upload_path, data):
+def pack_upload_file_request(upload_path, data_len):
     """
     :param upload_path: path to upload to including file name
-    :param data: data of file
+    :param data_len: the length of the data
     :return: message built py protocol
     """
-    return f"12{str(len(upload_path)).zfill(2)}{upload_path}{str(len(data)).zfill(6)}{data}"
+    return f"12{str(len(upload_path)).zfill(2)}{upload_path}{str(len(str(data_len))).zfill(2)}{data_len}"
 
 
 def pack_create_folder_request(path):

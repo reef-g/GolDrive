@@ -5,6 +5,7 @@ import queue
 import Settings
 import serverProtocol
 import encryption
+import sFileHandler
 
 
 class ServerComm:
@@ -14,6 +15,7 @@ class ServerComm:
         :param recv_q
         """
         self.port = port
+        print(self.port)
         self.recv_q = recv_q
         self.serverSocket = socket.socket()
         self.openClients = {}  # [socket]:[ip, key]
@@ -62,8 +64,12 @@ class ServerComm:
 
                         # files server
                         else:
-                            file_name, file_len = serverProtocol.unpack_message(decrypted_data)
-                            self._recv_file(currSocket, file_name, file_len)
+                            opcode, params = serverProtocol.unpack_message(decrypted_data)
+                            if opcode == "12":
+
+                                self.recv_file(currSocket, params[1])
+                            else:
+                                self.recv_q.put((self.openClients[currSocket][0], decrypted_data))
 
     def _change_key(self, client, ip):
         """
@@ -132,9 +138,12 @@ class ServerComm:
         """
         return self.isRunning
 
-    def _recv_file(self, client, file_name, file_len):
+    def recv_file(self, client, file_len):
         data = bytearray()
+        file_len = int(file_len)
+        ip = self.openClients[client][0]
         try:
+            print(len(data), file_len)
             while len(data) < file_len:
                 slices = file_len - len(data)
                 if slices > 1024:
@@ -143,11 +152,38 @@ class ServerComm:
                     data.extend(client.recv(slices))
                     break
         except Exception as e:
-            self.recv_q.put(("fail", self.openClients[client][0], file_name))
+            self.recv_q.put(ip, ("12", None))
             print("main server in recv file comm ", str(e))
             self._handle_disconnect(client)
         else:
-            self.recv_q.put(("success", self.openClients[client][0], file_name, data))
+            print(data)
+            self.recv_q.put(ip, ("12", data))
+
+    def send_file(self, client_ip, path):
+        client_socket = self._find_socket_by_ip(client_ip)
+        if client_socket:
+            status = 0
+            try:
+                with open(f"{Settings.USER_FILES_PATH}/{path}", 'rb') as f:
+                    data = f.read()
+            except Exception as e:
+                print(str(e))
+                status = 1
+                msg = serverProtocol.pack_file_download_response(status, 0)
+                self.send(client_ip, msg)
+
+            else:
+                cryptFile = self.openClients[client_socket][1].enc_msg(data)
+                msg = serverProtocol.pack_file_download_response(status, len(cryptFile))
+                print(msg)
+                self.send(client_ip, msg)
+                try:
+                    client_socket.send(cryptFile)
+                    print(cryptFile)
+                except Exception as e:
+                    print(str(e))
+                    self._handle_disconnect(client_socket)
+
 
 
 if __name__ == "__main__":

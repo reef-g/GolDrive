@@ -1,8 +1,7 @@
 import os.path
 import queue
 import threading
-
-import clientComm
+import portsHandler
 import serverComm
 import serverProtocol
 import Settings
@@ -15,23 +14,22 @@ def main_loop():
     """
     :return: the main loop of the server
     """
-    # will be the database object later
     msg_q = queue.Queue()
-    recv_commands = {"01": _handle_registration, "02": _handle_login, "08": _handle_rename_file, "10": _handle_delete_file, "11": _handle_downoad_file}
-    # used_port = []
 
     main_server = serverComm.ServerComm(Settings.SERVERPORT, msg_q, 4)
-    threading.Thread(target=_handle_messages, args=(main_server, msg_q, recv_commands, )).start()
+    threading.Thread(target=_handle_messages, args=(main_server, msg_q,)).start()
 
 
-def _handle_messages(main_server, msg_q, recv_commands):
+def _handle_messages(main_server, msg_q):
     """
     :param main_server: the server object
     :param msg_q: the queue of messages to handle
-    :param recv_commands: dictionary of functions according to their opcode
     :return: takes the message out the message queue and runs the according function
     """
     my_db = DB.DB()
+
+    recv_commands = {"01": _handle_registration, "02": _handle_login, "08": _handle_rename_file,
+                     "10": _handle_delete_file}
 
     while True:
         ip, data = msg_q.get()
@@ -76,16 +74,36 @@ def _handle_login(main_server, db, client_ip, username, password):
     main_server.send(client_ip, msg)
 
     if status == 0:
+        port_to_give = portsHandler.PortsHandler.get_next_port()
+        files_q = queue.Queue()
+        files_server = serverComm.ServerComm(port_to_give, files_q, 6)
+        threading.Thread(target=handle_files, args=(files_server, files_q,)).start()
+        port_msg = serverProtocol.pack_upload_port(port_to_give)
+        main_server.send(client_ip, port_msg)
+
         main_server.send(client_ip, serverProtocol.pack_files_message(username))
+
+
+def handle_files(files_server, files_q):
+    recv_commands = {"11": _handle_download_file, "12": _handle_upload_file}
+
+    while True:
+        ip, data = files_q.get()
+        print(ip, data)
+
+        protocol_num, params = serverProtocol.unpack_message(data)
+
+        if protocol_num in recv_commands.keys():
+            recv_commands[protocol_num](files_server, ip, *params)
 
 
 def _handle_delete_file(main_server, db, client_ip, path):
     """
-    :param main_server:
-    :param db:
-    :param client_ip:
-    :param path:
-    :return:
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param path: the path of the file to delete
+    :return: deletes the file and return the message by the protocol
     """
 
     status = sFileHandler.delete_file(f"{Settings.USER_FILES_PATH}/{path}")
@@ -95,12 +113,12 @@ def _handle_delete_file(main_server, db, client_ip, path):
 
 def _handle_rename_file(main_server, db, client_ip, path, new_name):
     """
-    :param main_server:
-    :param db:
-    :param client_ip:
-    :param name:
-    :param new_name:
-    :return:
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param path: the path of the file to rename
+    :param new_name: the new name of the file
+    :return: renames the file and return the message by the protocol
     """
 
     status = sFileHandler.rename_file(f"{Settings.USER_FILES_PATH}/{path}", new_name)
@@ -108,18 +126,19 @@ def _handle_rename_file(main_server, db, client_ip, path, new_name):
     main_server.send(client_ip, msg)
 
 
-def _handle_downoad_file(main_server, db, client_ip, path):
+def _handle_download_file(main_server, client_ip, path):
     """
-    :param main_server:
-    :param db:
-    :param client_ip:
-    :param path:
-    :return:
+    :param main_server: the server object
+    :param client_ip: the clients ip
+    :param path: the path of the file to download
+    :return: returns the data of the file
     """
+    print("im here")
+    main_server.send_file(client_ip, path)
 
-    status, data = sFileHandler.download_file(f"{Settings.USER_FILES_PATH}/{path}")
-    msg = serverProtocol.pack_file_download_response(status, data)
-    main_server.send(client_ip, msg)
+
+def _handle_upload_file(main_server, client_ip, file_name, file_len):
+    main_server.recv_file(client_ip, file_name, file_len)
 
 
 if __name__ == '__main__':

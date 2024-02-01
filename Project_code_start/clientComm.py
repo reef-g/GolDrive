@@ -38,8 +38,14 @@ class ClientComm:
             if self.port == Settings.SERVERPORT:
                 self.recvQ.put(decrypted_data)
             else:
-                file_name, file_len = clientProtocol.unpack_message(decrypted_data)
-                self._recv_file(file_name, file_len)
+                opcode, params = clientProtocol.unpack_message(decrypted_data)
+                if opcode == "11":
+                    if params[0] == "0":
+                        self._recv_file(params[1])
+                    else:
+                        self.recvQ.put(decrypted_data)
+                else:
+                    self.recvQ.put(decrypted_data)
 
     def _change_key(self):
         privateA, a = encryption.get_dh_factor()
@@ -69,22 +75,47 @@ class ClientComm:
     def _close(self):
         self.socket.close()
 
-    def _recv_file(self, client, file_name, file_len):
+    def _recv_file(self, file_len):
         data = bytearray()
+        file_len = int(file_len)
+
         try:
             while len(data) < file_len:
                 slices = file_len - len(data)
                 if slices > 1024:
-                    data.extend(client.recv(1024))
+                    data.extend(self.socket.recv(1024))
                 else:
-                    data.extend(client.recv(slices))
+                    data.extend(self.socket.recv(slices))
                     break
+
         except Exception as e:
-            self.recvQ.put(("fail", file_name))
+            self.recvQ.put("11011011")
             print("main server in recv file comm ", str(e))
             self._close()
         else:
-            self.recvQ.put(("success", file_name, data))
+            self.recvQ.put(("11", '0', self.enc_obj.dec_msg(data)))
+            print("after insert in queue")
+
+    def send_file(self, path):
+        try:
+            with open(path, 'rb') as f:
+                data = f.read()
+        except Exception as e:
+            print(str(e))
+
+        else:
+            cryptFile = self.enc_obj.enc_msg(data)
+            msg = clientProtocol.pack_upload_file_request(path, len(cryptFile))
+            print(msg)
+            self.send(msg)
+            try:
+                self.socket.send(cryptFile)
+                print(cryptFile)
+            except Exception as e:
+                print(str(e))
+
+
+
 
 
 if __name__ == "__main__":
