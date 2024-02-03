@@ -29,7 +29,7 @@ def _handle_messages(main_server, msg_q):
     my_db = DB.DB()
 
     recv_commands = {"01": _handle_registration, "02": _handle_login, "08": _handle_rename_file,
-                     "10": _handle_delete_file}
+                     "10": _handle_delete_file, "13": _handle_create_dir}
 
     while True:
         ip, data = msg_q.get()
@@ -54,7 +54,7 @@ def _handle_registration(main_server, db, client_ip, username, password, mail):
     main_server.send(client_ip, msg)
 
     if ans == 0:
-        print(f"Added user - {username}")
+        os.mkdir(f"{Settings.USER_FILES_PATH}/{username}")
 
 
 def _handle_login(main_server, db, client_ip, username, password):
@@ -89,9 +89,11 @@ def handle_files(files_server, files_q):
 
     while True:
         ip, data = files_q.get()
-        print(ip, data)
 
-        protocol_num, params = serverProtocol.unpack_message(data)
+        if data[0] == "12":
+            protocol_num, *params = data
+        else:
+            protocol_num, params = serverProtocol.unpack_message(data)
 
         if protocol_num in recv_commands.keys():
             recv_commands[protocol_num](files_server, ip, *params)
@@ -126,19 +128,45 @@ def _handle_rename_file(main_server, db, client_ip, path, new_name):
     main_server.send(client_ip, msg)
 
 
-def _handle_download_file(main_server, client_ip, path):
+def _handle_download_file(main_server, client_ip, path, selected_path):
     """
     :param main_server: the server object
     :param client_ip: the clients ip
     :param path: the path of the file to download
     :return: returns the data of the file
     """
-    print("im here")
-    main_server.send_file(client_ip, path)
+    main_server.send_file(client_ip, path, selected_path)
 
 
-def _handle_upload_file(main_server, client_ip, file_name, file_len):
-    main_server.recv_file(client_ip, file_name, file_len)
+def _handle_upload_file(main_server, client_ip, path, data):
+    """
+    :param main_server:
+    :param client_ip:
+    :param path:
+    :param data:
+    :return:
+    """
+    status = 0
+    try:
+        with open(f"{Settings.USER_FILES_PATH}/{path}", 'wb' if type(data) == bytes else 'w') as f:
+            f.write(data)
+    except Exception as e:
+        print(str(e))
+        status = 1
+
+    msg = serverProtocol.pack_file_upload_response(status, path)
+    main_server.send(client_ip, msg)
+
+
+def _handle_create_dir(main_server, db, client_ip, path):
+    status = 0
+    try:
+        os.mkdir(f"{Settings.USER_FILES_PATH}/{path}")
+    except Exception as e:
+        print(str(e))
+        status = 1
+    msg = serverProtocol.pack_create_folder_response(status)
+    main_server.send(client_ip, msg)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,5 @@
+import os
+
 import wx
 import wx.lib.scrolledpanel
 from pubsub import pub
@@ -147,14 +149,18 @@ class FilesPanel(wx.Panel):
         login_button = wx.Button(self, label="BACK TO LOGIN")
         self.backButton = wx.Button(self, label="BACK")
         self.uploadButton = wx.Button(self, label="UPLOAD FILE")
-        self.Bind(wx.EVT_BUTTON, self.back_dir, self.backButton)
+        self.createDirButton = wx.Button(self, label="CREATE DIRECTORY")
         self.Bind(wx.EVT_BUTTON, self.login_control, login_button)
+        self.Bind(wx.EVT_BUTTON, self.back_dir, self.backButton)
         self.Bind(wx.EVT_BUTTON, self.upload_file_request, self.uploadButton)
+        self.Bind(wx.EVT_BUTTON, self.create_dir_request, self.createDirButton)
         self.login_sizer.Add(login_button)
         self.login_sizer.AddSpacer(20)
         self.login_sizer.Add(self.backButton)
         self.login_sizer.AddSpacer(20)
         self.login_sizer.Add(self.uploadButton)
+        self.login_sizer.AddSpacer(20)
+        self.login_sizer.Add(self.createDirButton)
 
         self.sizer.AddMany([(self.title_sizer, 0, wx.CENTER),
                             (self.scroll_panel, 0, wx.CENTER),
@@ -165,7 +171,8 @@ class FilesPanel(wx.Panel):
         pub.subscribe(self._get_branches, "filesOk")
         pub.subscribe(self._delete_obj, "deleteOk")
         pub.subscribe(self._rename_obj, "renameOk")
-        pub.subscribe(self._download_object, "downloadOk")
+        pub.subscribe(self._upload_object, "uploadOk")
+        pub.subscribe(self._create_dir, "createOk")
         pub.subscribe(self._files_comm_update, "update_file_comm")
 
         self.Layout()
@@ -181,6 +188,14 @@ class FilesPanel(wx.Panel):
         self.branches = branches
 
         for branch in branches:
+            branch[1].sort()
+            branch[2].sort()
+            if branch[1] == [""]:
+                branch[1].pop(0)
+            if branch[2] == [""]:
+                branch[2].pop(0)
+
+        for branch in branches:
             if branch[0] == "":
                 self.curPath = ""
                 self.show_files()
@@ -194,18 +209,12 @@ class FilesPanel(wx.Panel):
         dirs = branch[1][::]
         files = branch[2][::]
 
-        if dirs == ['']:
-            dirs = []
-
-        if files == ['']:
-            files = []
-
         self.scroll_panel.DestroyChildren()
 
         self.grid_sizer = wx.GridSizer(cols=15, hgap=10, vgap=10)
 
-        image_paths = [r"D:\!ReefGold\Project_code_start\Graphics\dirs_image.png",
-                       r"D:\!ReefGold\Project_code_start\Graphics\files_image.png"]
+        image_paths = [r"C:\Users\reefg\PycharmProjects\Project_code_start\Graphics\dirs_image.png",
+                       r"C:\Users\reefg\PycharmProjects\Project_code_start\Graphics\files_image.png"]
 
         # Add items with corresponding images to the grid sizer
         while dirs or files:
@@ -270,12 +279,10 @@ class FilesPanel(wx.Panel):
     def chose_dir(self, name):
         self.curPath += f"/{name}"
         self.curPath = self.curPath.lstrip('/')
-
         self.show_files()
 
     def back_dir(self, event):
         self.curPath = "/".join(self.curPath.split('/')[:-1])
-
         self.show_files()
 
     def delete_file_request(self, name):
@@ -290,7 +297,7 @@ class FilesPanel(wx.Panel):
             self.comm.send(msg2send)
 
     def _delete_obj(self):
-        is_dir = self.filesObj[f"{self.curPath}/{self.file_name}"][1]
+        is_dir = self.filesObj[f"{self.curPath}/{self.file_name}".lstrip('/')][1]
 
         for branch in self.branches:
             if branch[0] == self.curPath:
@@ -315,17 +322,15 @@ class FilesPanel(wx.Panel):
             self.comm.send(msg2send)
 
     def _rename_obj(self, new_name):
-        is_dir = self.filesObj[f"{self.curPath}/{self.file_name}"][1]
+        is_dir = self.filesObj[f"{self.curPath}/{self.file_name}".lstrip('/')][1]
 
         for branch in self.branches:
             if branch[0] == self.curPath:
                 if is_dir:
                     index_to_replace = branch[1].index(self.file_name)
-
                     branch[1][index_to_replace] = new_name
                 else:
                     index_to_replace = branch[2].index(self.file_name)
-
                     branch[2][index_to_replace] = new_name
                 break
 
@@ -333,26 +338,35 @@ class FilesPanel(wx.Panel):
         self.parent.show_pop_up(f"Renamed {self.file_name} to {new_name} successfully.", "Success")
 
     def download_file_request(self, file_name):
-        self.file_name = file_name
-        msg2send = clientProtocol.pack_file_download_request(f"{self.parent.username}/{self.curPath}/{self.file_name}")
-        self.files_comm.send(msg2send)
+        base_name, file_extension = os.path.splitext(file_name)
 
-    def _download_object(self, data):
-        dlg = wx.DirDialog(self, "Choose a file", style=wx.DD_DEFAULT_STYLE)
+        file_type = file_extension[1:].lower()
+
+        type_descriptions = {
+            'txt': 'Text files',
+            'docx': 'Microsoft Word documents',
+            'jpg': 'JPEG images',
+            'png': 'PNG images',
+        }
+
+        wildcard_list = [f"{type_descriptions[key]} (*.{key.lower()})|*.{key.lower()}" for key in type_descriptions]
+        if file_type in type_descriptions:
+            wildcard_list.remove(f"{type_descriptions[file_type]} (*.{file_type})|*.{file_type}")
+            wildcard_list.insert(0, f"{type_descriptions[file_type]} (*.{file_type})|*.{file_type}")
+            wildcard_list.append("All files (*.*)|*.*")
+        else:
+            wildcard_list.insert(0, "All files (*.*)|*.*")
+
+        wildcard = '|'.join(wildcard_list)
+
+        dlg = wx.FileDialog(self, "Choose a file", defaultFile=file_name, wildcard=wildcard, style=wx.FD_SAVE)
         result = dlg.ShowModal()
 
         if result == wx.ID_OK:
             selected_path = dlg.GetPath().replace('\\', '/')
 
-            try:
-                with open(f"{selected_path}/{self.file_name}", 'wb' if type(data) == bytes else 'w') as f:
-                    f.write(data)
-                self.parent.show_pop_up(f"Downloaded {self.file_name} to {selected_path} successfully.", "Success")
-
-            except Exception as e:
-                self.parent.show_pop_up(f"Download failed, try again.", "Error")
-                print(str(e))
-                print("Error here")
+            msg2send = clientProtocol.pack_download_file_request(f"{self.parent.username}/{self.curPath}/{file_name}", selected_path)
+            self.files_comm.send(msg2send)
 
         dlg.Destroy()
 
@@ -362,8 +376,38 @@ class FilesPanel(wx.Panel):
 
         if result == wx.ID_OK:
             selected_path = dlg.GetPath().replace('\\', '/')
+            self.files_comm.send_file(selected_path, f"{self.parent.username}/{self.curPath}".rstrip('/'))
 
-            self.files_comm.send_file(selected_path)
+    def _upload_object(self, path):
+        name_to_add = path.split('/')[-1]
+
+        for branch in self.branches:
+            if branch[0] == self.curPath:
+                branch[2].append(name_to_add)
+                branch[2].sort()
+                break
+        self.show_files()
+
+    def create_dir_request(self, event):
+        dlg = wx.TextEntryDialog(self, f'Please enter the name for the directory:', 'Create new directory', '')
+        result = dlg.ShowModal()
+        dlg.Destroy()
+
+        if result == wx.ID_OK:
+            self.file_name = dlg.GetValue()
+            full_path = f"{self.parent.username}/{self.curPath}/{self.file_name}".lstrip("/")
+            msg2send = clientProtocol.pack_create_folder_request(full_path)
+            self.comm.send(msg2send)
+
+    def _create_dir(self):
+        for branch in self.branches:
+            if branch[0] == self.curPath:
+                branch[1].append(self.file_name)
+                branch[1].sort()
+                break
+
+        self.branches.append((f'{self.file_name}', [], []))
+        self.show_files()
 
 
 class RegistrationPanel(wx.Panel):
@@ -430,7 +474,7 @@ class PopMenu(wx.Menu):
         self.parent = parent
         self.name = name
 
-        static_text_item = wx.MenuItem(self, -1, name)
+        static_text_item = wx.MenuItem(self, 0, name)
         # Make it non-selectable
         static_text_item.Enable(False)
         self.Append(static_text_item)

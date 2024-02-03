@@ -13,8 +13,6 @@ def unpack_message(msg):
     data_from_msg = []
     msg = msg[2:]
 
-    print(msg, 12345)
-
     while len(msg) > 0:
         try:
             data, msg = get_data_from_string(msg, 2)
@@ -48,7 +46,7 @@ def pack_files_message(username):
     :param username: username of user
     :return: string with all files and directories of user in the drive
     """
-    files_of_user = "13"
+    files_of_user = "03"
     # the path to work at, will later to change to the person directory
     path = f"{Settings.USER_FILES_PATH}/{username}"
 
@@ -104,9 +102,10 @@ def pack_forgot_password_response(response):
     return f"07{str(len(str(response))).zfill(2)}{response}"
 
 
-def pack_file_download_response(response, datalen):
+def pack_file_download_response(response, datalen, path, selected_path):
     # download file response
-    return f"11{str(len(str(response))).zfill(2)}{response}{str(len(str(datalen))).zfill(2)}{datalen}"
+    return f"11{str(len(str(response))).zfill(2)}{response}{str(len(str(datalen))).zfill(2)}{datalen}" \
+           f"{str(len(str(path))).zfill(2)}{path}{str(len(str(selected_path))).zfill(2)}{selected_path}"
 
 
 def pack_upload_port(port):
@@ -117,12 +116,13 @@ def pack_upload_port(port):
     return f"16{str(len(str(port))).zfill(2)}{port}"
 
 
-def pack_file_upload_response(response):
+def pack_file_upload_response(response, path):
     """
     :param response: response to file upload
+    :param path: path of file
     :return: opcode + length + response
     """
-    return f"12{str(len(str(response))).zfill(2)}{response}"
+    return f"12{str(len(str(response))).zfill(2)}{response}{str(len(str(path))).zfill(2)}{path}"
 
 
 def pack_create_folder_response(response):

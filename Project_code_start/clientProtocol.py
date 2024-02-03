@@ -6,7 +6,7 @@ def unpack_message(msg):
     opcode = msg[:2]
     msg = msg[2:]
     data_from_msg = []
-    if opcode == "13":
+    if opcode == "03":
         data_from_msg = unpack_files_message(msg)
 
     else:
@@ -100,12 +100,13 @@ def pack_forgot_password_request(email):
     return f"07{str(len(email)).zfill(2)}{email}"
 
 
-def pack_file_download_request(path):
+def pack_download_file_request(path, selected_path):
     """
     :param path: path of file to download
+    :param selected_path: path of where to download the file to
     :return: message built py protocol
     """
-    return f"11{str(len(path)).zfill(2)}{path}"
+    return f"11{str(len(path)).zfill(2)}{path}{str(len(selected_path)).zfill(2)}{selected_path}"
 
 
 def pack_upload_file_request(upload_path, data_len):

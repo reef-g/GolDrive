@@ -22,20 +22,16 @@ def main_loop():
 
 
 def _handle_messages(msg_q):
-    recv_commands = {"01": _handle_registration, "02": _handle_login, "08": _handle_rename_file,
-                     "10": _handle_delete_file, "13": _handle_send_files,
+    recv_commands = {"01": _handle_registration, "02": _handle_login, "03": _handle_send_files,
+                     "08": _handle_rename_file, "10": _handle_delete_file, "13": _handle_create_dir,
                      "16": _handle_files_port}
 
     while True:
         data = msg_q.get()
         protocol_num, params = clientProtocol.unpack_message(data)
         # since * breaks the list down and we want the whole list
-        if protocol_num == "13":
-            if params:
-                _handle_send_files(params)
-            else:
-                _handle_send_files([])
-
+        if protocol_num == "03":
+            _handle_send_files(params)
         else:
             recv_commands[protocol_num](*params)
 
@@ -50,16 +46,16 @@ def _handle_files_port(files_port):
 
 
 def _handle_files(files_q):
-    recv_commands = {"11": _handle_download_file}
+    recv_commands = {"11": _handle_download_file, "12": _handle_upload_file}
 
     while True:
         data = files_q.get()
-        print(data)
         if data[0] == "11":
-            _handle_download_file(data[1], data[2])
+            protocol_num, *params = data
         else:
             protocol_num, params = clientProtocol.unpack_message(data)
-            recv_commands[protocol_num](*params)
+
+        recv_commands[protocol_num](*params)
 
 
 def _handle_registration(status):
@@ -77,7 +73,6 @@ def _handle_login(status):
 
 
 def _handle_delete_file(status):
-    status = "0"
     if status == "0":
         wx.CallAfter(pub.sendMessage, "deleteOk")
     else:
@@ -91,11 +86,21 @@ def _handle_rename_file(status, new_name):
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't rename file.", title="Error")
 
 
-def _handle_download_file(status, data):
+def _handle_download_file(status, path, selected_path, data):
+    file_name = path.split('/')[-1]
     if status == "0":
-        wx.CallAfter(pub.sendMessage, "downloadOk", data=data)
+        try:
+            with open(selected_path, 'wb' if type(data) == bytes else 'w') as f:
+                f.write(data)
+
+            wx.CallAfter(pub.sendMessage, "showPopUp", text=f"Downloaded {file_name} to {selected_path} successfully.", title="Success")
+
+        except Exception as e:
+            wx.CallAfter(pub.sendMessage, "showPopUp", text="Download failed.", title="Error")
+            print(str(e))
+
     else:
-        wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't download file.", title="Error")
+        wx.CallAfter(pub.sendMessage, "showPopUp", text="Download failed.", title="Error")
 
 
 def _handle_upload_file(status, path):
@@ -103,6 +108,13 @@ def _handle_upload_file(status, path):
         wx.CallAfter(pub.sendMessage, "uploadOk", path=path)
     else:
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't upload file.", title="Error")
+
+
+def _handle_create_dir(status):
+    if status == "0":
+        wx.CallAfter(pub.sendMessage, "createOk")
+    else:
+        wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't create folder.", title="Error")
 
 
 def _handle_send_files(branches):

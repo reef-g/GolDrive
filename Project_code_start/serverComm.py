@@ -15,7 +15,6 @@ class ServerComm:
         :param recv_q
         """
         self.port = port
-        print(self.port)
         self.recv_q = recv_q
         self.serverSocket = socket.socket()
         self.openClients = {}  # [socket]:[ip, key]
@@ -65,9 +64,9 @@ class ServerComm:
                         # files server
                         else:
                             opcode, params = serverProtocol.unpack_message(decrypted_data)
-                            if opcode == "12":
 
-                                self.recv_file(currSocket, params[1])
+                            if opcode == "12":
+                                self.recv_file(currSocket, *params)
                             else:
                                 self.recv_q.put((self.openClients[currSocket][0], decrypted_data))
 
@@ -138,12 +137,11 @@ class ServerComm:
         """
         return self.isRunning
 
-    def recv_file(self, client, file_len):
+    def recv_file(self, client, file_path, file_len):
         data = bytearray()
         file_len = int(file_len)
         ip = self.openClients[client][0]
         try:
-            print(len(data), file_len)
             while len(data) < file_len:
                 slices = file_len - len(data)
                 if slices > 1024:
@@ -152,14 +150,14 @@ class ServerComm:
                     data.extend(client.recv(slices))
                     break
         except Exception as e:
-            self.recv_q.put(ip, ("12", None))
+            self.recv_q.put((ip, ("12", file_path, None)))
             print("main server in recv file comm ", str(e))
             self._handle_disconnect(client)
         else:
-            print(data)
-            self.recv_q.put(ip, ("12", data))
+            decData = self.openClients[client][1].dec_msg(data)
+            self.recv_q.put((ip, ("12", file_path, decData)))
 
-    def send_file(self, client_ip, path):
+    def send_file(self, client_ip, path, selected_path):
         client_socket = self._find_socket_by_ip(client_ip)
         if client_socket:
             status = 0
@@ -169,17 +167,15 @@ class ServerComm:
             except Exception as e:
                 print(str(e))
                 status = 1
-                msg = serverProtocol.pack_file_download_response(status, 0)
+                msg = serverProtocol.pack_file_download_response(status, 0, path, selected_path)
                 self.send(client_ip, msg)
 
             else:
                 cryptFile = self.openClients[client_socket][1].enc_msg(data)
-                msg = serverProtocol.pack_file_download_response(status, len(cryptFile))
-                print(msg)
+                msg = serverProtocol.pack_file_download_response(status, len(cryptFile), path, selected_path)
                 self.send(client_ip, msg)
                 try:
                     client_socket.send(cryptFile)
-                    print(cryptFile)
                 except Exception as e:
                     print(str(e))
                     self._handle_disconnect(client_socket)

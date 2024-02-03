@@ -41,7 +41,7 @@ class ClientComm:
                 opcode, params = clientProtocol.unpack_message(decrypted_data)
                 if opcode == "11":
                     if params[0] == "0":
-                        self._recv_file(params[1])
+                        self._recv_file(*params[1:])
                     else:
                         self.recvQ.put(decrypted_data)
                 else:
@@ -75,9 +75,10 @@ class ClientComm:
     def _close(self):
         self.socket.close()
 
-    def _recv_file(self, file_len):
+    def _recv_file(self, file_len, path, selected_path):
         data = bytearray()
         file_len = int(file_len)
+        path = '/'.join(path.split('/')[1::]).lstrip('/')
 
         try:
             while len(data) < file_len:
@@ -89,14 +90,13 @@ class ClientComm:
                     break
 
         except Exception as e:
-            self.recvQ.put("11011011")
+            self.recvQ.put(("11", '1', path, selected_path, None))
             print("main server in recv file comm ", str(e))
             self._close()
         else:
-            self.recvQ.put(("11", '0', self.enc_obj.dec_msg(data)))
-            print("after insert in queue")
+            self.recvQ.put(("11", '0', path, selected_path, self.enc_obj.dec_msg(data)))
 
-    def send_file(self, path):
+    def send_file(self, path, currPath):
         try:
             with open(path, 'rb') as f:
                 data = f.read()
@@ -105,12 +105,10 @@ class ClientComm:
 
         else:
             cryptFile = self.enc_obj.enc_msg(data)
-            msg = clientProtocol.pack_upload_file_request(path, len(cryptFile))
-            print(msg)
+            msg = clientProtocol.pack_upload_file_request(f"{currPath}/{path.split('/')[-1]}".lstrip('/'), len(cryptFile))
             self.send(msg)
             try:
                 self.socket.send(cryptFile)
-                print(cryptFile)
             except Exception as e:
                 print(str(e))
 
