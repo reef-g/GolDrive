@@ -133,6 +133,15 @@ class DB:
 
 if __name__ == '__main__':
     s = DB()
-    s.delete_user("aksodksdk")
+    s.delete_user("asd")
+    s.delete_user("reasd")
+    s.delete_user("test")
+    s.delete_user("lihi")
+    s.delete_user("what")
+    s.delete_user("reefasd")
+    s.delete_user("reef2")
+    s.delete_user("lior")
+    s.delete_user("imri")
 
-
+    s.delete_user("yoav")
+    s.delete_user("yoav")
