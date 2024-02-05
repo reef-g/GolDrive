@@ -1,5 +1,5 @@
 import os
-
+import Settings
 import wx
 import wx.lib.scrolledpanel
 from pubsub import pub
@@ -140,11 +140,30 @@ class FilesPanel(wx.Panel):
         self.scroll_panel.SetupScrolling()
         self.scroll_panel.SetBackgroundColour("white")
 
-        self.files_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.icons_and_files_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.icons_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.settings_img = wx.StaticBitmap(self, -1, wx.Bitmap(
+            f"{Settings.USER_IMAGES_PATH}/Settings.png", wx.BITMAP_TYPE_ANY))
+        self.shared_files_img = wx.StaticBitmap(self, -1, wx.Bitmap(
+            f"{Settings.USER_IMAGES_PATH}/Shared.png", wx.BITMAP_TYPE_ANY))
+
+        self.shared_files_img.Bind(wx.EVT_LEFT_DOWN, self.show_shared_files)
+
+        self.icons_sizer.AddSpacer(10)
+        self.icons_sizer.Add(self.settings_img)
+        self.icons_sizer.AddSpacer(22)
+        self.icons_sizer.Add(self.shared_files_img)
+
+        self.files_sizer = wx.BoxSizer()
+        self.icons_and_files_sizer.AddSpacer(90)
+        self.icons_and_files_sizer.Add(self.scroll_panel, 0, wx.CENTER)
+        self.icons_and_files_sizer.AddSpacer(17)
+        self.icons_and_files_sizer.Add(self.icons_sizer)
 
         self.scroll_panel.SetSizer(self.files_sizer)
 
         self.login_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.back_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         login_button = wx.Button(self, label="BACK TO LOGIN")
         self.backButton = wx.Button(self, label="BACK")
@@ -156,14 +175,15 @@ class FilesPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.create_dir_request, self.createDirButton)
         self.login_sizer.Add(login_button)
         self.login_sizer.AddSpacer(20)
-        self.login_sizer.Add(self.backButton)
-        self.login_sizer.AddSpacer(20)
+        self.back_sizer.Add(self.backButton)
+        self.back_sizer.AddSpacer(20)
+        self.login_sizer.Add(self.back_sizer)
         self.login_sizer.Add(self.uploadButton)
         self.login_sizer.AddSpacer(20)
         self.login_sizer.Add(self.createDirButton)
 
         self.sizer.AddMany([(self.title_sizer, 0, wx.CENTER),
-                            (self.scroll_panel, 0, wx.CENTER),
+                            (self.icons_and_files_sizer, 0, wx.CENTER),
                             (self.login_sizer, 0, wx.CENTER)])
 
         self.SetSizer(self.sizer)
@@ -174,6 +194,9 @@ class FilesPanel(wx.Panel):
         pub.subscribe(self._upload_object, "uploadOk")
         pub.subscribe(self._create_dir, "createOk")
         pub.subscribe(self._files_comm_update, "update_file_comm")
+
+        self.drag_data = wx.CustomDataObject("Text")
+        self.drag_source = None
 
         self.Layout()
         self.Hide()
@@ -197,24 +220,33 @@ class FilesPanel(wx.Panel):
 
         for branch in branches:
             if branch[0] == "":
+                branch[1].remove("Shared")
                 self.curPath = ""
-                self.show_files()
+                self.show_files(self.curPath)
 
-    def show_files(self):
+    def show_files(self, path):
+        self.scroll_panel.DestroyChildren()
+
+        if self.curPath.split('/')[-1] != "Shared":
+            self.shared_files_img.Show()
+
+        if path == "":
+            self.backButton.Show(False)
+        else:
+            self.backButton.Show(True)
+
         branch = ["", [], []]
         for temp in self.branches:
-            if temp[0] == self.curPath:
+            if temp[0] == path:
                 branch = temp
 
         dirs = branch[1][::]
         files = branch[2][::]
 
-        self.scroll_panel.DestroyChildren()
-
         self.grid_sizer = wx.GridSizer(cols=15, hgap=10, vgap=10)
 
-        image_paths = [r"C:\Users\reefg\PycharmProjects\Project_code_start\Graphics\dirs_image.png",
-                       r"C:\Users\reefg\PycharmProjects\Project_code_start\Graphics\files_image.png"]
+        image_paths = [f"{Settings.USER_IMAGES_PATH}/dirs_image.png",
+                       f"{Settings.USER_IMAGES_PATH}/files_image.png"]
 
         # Add items with corresponding images to the grid sizer
         while dirs or files:
@@ -248,7 +280,7 @@ class FilesPanel(wx.Panel):
             item_text.Bind(where_bind, self.select_file)
             item_image.Bind(where_bind, self.select_file)
 
-            self.filesObj[f"{self.curPath}/{item}".lstrip('/')] = (item_sizer, dir_file_flag)
+            self.filesObj[f"{path}/{item}".lstrip('/')] = (item_sizer, dir_file_flag)
 
             # Add item sizer to grid_sizer
             self.grid_sizer.Add(item_sizer, 0, wx.CENTER)
@@ -258,11 +290,6 @@ class FilesPanel(wx.Panel):
 
         # Scroll to the top
         self.scroll_panel.Scroll(0, 0)
-
-        if self.curPath == "":
-            self.backButton.Hide()
-        else:
-            self.backButton.Show()
 
         # Refresh the layout
         self.sizer.Layout()
@@ -279,11 +306,11 @@ class FilesPanel(wx.Panel):
     def chose_dir(self, name):
         self.curPath += f"/{name}"
         self.curPath = self.curPath.lstrip('/')
-        self.show_files()
+        self.show_files(self.curPath)
 
     def back_dir(self, event):
         self.curPath = "/".join(self.curPath.split('/')[:-1])
-        self.show_files()
+        self.show_files(self.curPath)
 
     def delete_file_request(self, name):
         dlg = wx.MessageDialog(self, 'Do you want to delete?', 'Confirmation', wx.YES_NO | wx.ICON_QUESTION)
@@ -307,7 +334,7 @@ class FilesPanel(wx.Panel):
                     branch[2].remove(self.file_name)
                 break
 
-        self.show_files()
+        self.show_files(self.curPath)
         self.parent.show_pop_up(f"Deleted {self.file_name} successfully.", "Success")
 
     def rename_file_request(self, name):
@@ -334,7 +361,7 @@ class FilesPanel(wx.Panel):
                     branch[2][index_to_replace] = new_name
                 break
 
-        self.show_files()
+        self.show_files(self.curPath)
         self.parent.show_pop_up(f"Renamed {self.file_name} to {new_name} successfully.", "Success")
 
     def download_file_request(self, file_name):
@@ -386,7 +413,7 @@ class FilesPanel(wx.Panel):
                 branch[2].append(name_to_add)
                 branch[2].sort()
                 break
-        self.show_files()
+        self.show_files(self.curPath)
 
     def create_dir_request(self, event):
         dlg = wx.TextEntryDialog(self, f'Please enter the name for the directory:', 'Create new directory', '')
@@ -406,8 +433,28 @@ class FilesPanel(wx.Panel):
                 branch[1].sort()
                 break
 
-        self.branches.append((f'{self.file_name}', [], []))
-        self.show_files()
+        self.branches.append((f'{self.curPath}/{self.file_name}'.lstrip('/'), [], []))
+        self.show_files(self.curPath)
+
+    def share_file_request(self, name):
+        dlg = wx.TextEntryDialog(self, f'Enter username of user you want to share to:', 'Confirmation', '')
+        result = dlg.ShowModal()
+        dlg.Destroy()
+
+        if result == wx.ID_OK:
+            username = dlg.GetValue()
+            if username != self.parent.username:
+                full_path = f"{self.parent.username}/{self.curPath}/{name}".replace('//', '/')
+                msg = clientProtocol.pack_share_request(full_path, username)
+                self.comm.send(msg)
+
+            else:
+                self.parent.show_pop_up(f"Don't enter your own username.", "Error")
+
+    def show_shared_files(self, event):
+        self.shared_files_img.Hide()
+        self.curPath += "/Shared".lstrip('/')
+        self.show_files("Shared")
 
 
 class RegistrationPanel(wx.Panel):
@@ -473,6 +520,7 @@ class PopMenu(wx.Menu):
 
         self.parent = parent
         self.name = name
+        self.pos = wx.GetMousePosition()
 
         static_text_item = wx.MenuItem(self, 0, name)
         # Make it non-selectable
@@ -481,14 +529,18 @@ class PopMenu(wx.Menu):
 
         self.AppendSeparator()
 
-        delete_item = wx.MenuItem(self, -1, 'delete file')
-        self.Append(delete_item)
+        self.Append(wx.MenuItem(self, -1, 'delete file'))
 
-        rename_item = wx.MenuItem(self, -1, 'rename file')
-        self.Append(rename_item)
+        self.Append(wx.MenuItem(self, -1, 'rename file'))
 
-        download_item = wx.MenuItem(self, -1, 'download file')
-        self.Append(download_item)
+        self.Append(wx.MenuItem(self, -1, 'download file'))
+
+        self.Append(wx.MenuItem(self, -1, 'share file'))
+
+        self.AppendSeparator()
+
+        cancel_item = wx.MenuItem(self, -1, "Cancel")
+        self.Append(cancel_item)
 
         # Bind the menu item click event
         self.Bind(wx.EVT_MENU, self.on_menu_item_click)
@@ -504,6 +556,8 @@ class PopMenu(wx.Menu):
             self.parent.rename_file_request(self.name)
         elif item == "download file":
             self.parent.download_file_request(self.name)
+        elif item == "share file":
+            self.parent.share_file_request(self.name)
 
 
 if __name__ == '__main__':

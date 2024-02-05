@@ -23,8 +23,8 @@ def main_loop():
 
 def _handle_messages(msg_q):
     recv_commands = {"01": _handle_registration, "02": _handle_login, "03": _handle_send_files,
-                     "08": _handle_rename_file, "10": _handle_delete_file, "13": _handle_create_dir,
-                     "16": _handle_files_port}
+                     "08": _handle_rename_file, "09": _handle_share_file, "10": _handle_delete_file,
+                     "13": _handle_create_dir, "16": _handle_files_port}
 
     while True:
         data = msg_q.get()
@@ -115,6 +115,13 @@ def _handle_create_dir(status):
         wx.CallAfter(pub.sendMessage, "createOk")
     else:
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't create folder.", title="Error")
+
+
+def _handle_share_file(status):
+    if status == "0":
+        wx.CallAfter(pub.sendMessage, "showPopUp", text="Shared file successfully.", title="Success")
+    else:
+        wx.CallAfter(pub.sendMessage, "showPopUp", text="User doesn't exist.", title="Error")
 
 
 def _handle_send_files(branches):

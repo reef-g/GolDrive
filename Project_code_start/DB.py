@@ -24,7 +24,7 @@ class DB:
         self.curr.execute(sql)
         self.conn.commit()
 
-    def _username_exist(self, username):
+    def username_exist(self, username):
         """
         :param username: username
         :return: True or False if username is in table
@@ -41,7 +41,7 @@ class DB:
         :return: adds user to table
         """
         flag = 1
-        if not self._username_exist(username):
+        if not self.username_exist(username):
             sql = "INSERT INTO users VALUES (?,?,?)"
             self.curr.execute(sql, (username, encryption.hash_msg(password), email))
             self.conn.commit()
@@ -55,7 +55,7 @@ class DB:
         :return: delets user
         """
         flag = 1
-        if self._username_exist(username):
+        if self.username_exist(username):
             sql = "DELETE FROM users WHERE username = ?"
             self.curr.execute(sql, (username,))
             self.conn.commit()
@@ -68,7 +68,7 @@ class DB:
         :param username: username
         :return: users password
         """
-        if self._username_exist(username):
+        if self.username_exist(username):
             sql = "SELECT password FROM users WHERE username = ?"
             self.curr.execute(sql, (username,))
             password, = self.curr.fetchone()
@@ -79,7 +79,7 @@ class DB:
         :param username: username
         :return: users email
         """
-        if self._username_exist(username):
+        if self.username_exist(username):
             sql = "SELECT email FROM users WHERE username = ?"
             self.curr.execute(sql, (username,))
             email, = self.curr.fetchone()
@@ -92,7 +92,7 @@ class DB:
         :return: changes username
         """
         flag = 1
-        if self._username_exist(username):
+        if self.username_exist(username):
             sql = f"UPDATE users SET username = ? WHERE username = ?"
             self.curr.execute(sql, (newname, username,))
             self.conn.commit()
@@ -107,7 +107,7 @@ class DB:
         :return: changes password
         """
         flag = 1
-        if self._username_exist(username):
+        if self.username_exist(username):
             sql = f"UPDATE users SET password = ? WHERE username = ?"
             self.curr.execute(sql, (password, username,))
             self.conn.commit()
@@ -122,7 +122,7 @@ class DB:
         :return: changes email
         """
         flag = 1
-        if self._username_exist(username):
+        if self.username_exist(username):
             sql = f"UPDATE users SET email = ? WHERE username = ?"
             self.curr.execute(sql, (email, username,))
             self.conn.commit()

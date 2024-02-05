@@ -8,6 +8,7 @@ import Settings
 import DB
 import encryption
 import sFileHandler
+import shutil
 
 
 def main_loop():
@@ -29,7 +30,7 @@ def _handle_messages(main_server, msg_q):
     my_db = DB.DB()
 
     recv_commands = {"01": _handle_registration, "02": _handle_login, "08": _handle_rename_file,
-                     "10": _handle_delete_file, "13": _handle_create_dir}
+                     "09": _handle_share_file, "10": _handle_delete_file, "13": _handle_create_dir}
 
     while True:
         ip, data = msg_q.get()
@@ -54,7 +55,9 @@ def _handle_registration(main_server, db, client_ip, username, password, mail):
     main_server.send(client_ip, msg)
 
     if ans == 0:
-        os.mkdir(f"{Settings.USER_FILES_PATH}/{username}")
+        if not os.path.isdir(f"{Settings.USER_FILES_PATH}/{username}"):
+            os.mkdir(f"{Settings.USER_FILES_PATH}/{username}")
+            os.mkdir(f"{Settings.USER_FILES_PATH}/{username}/Shared")
 
 
 def _handle_login(main_server, db, client_ip, username, password):
@@ -166,6 +169,22 @@ def _handle_create_dir(main_server, db, client_ip, path):
         print(str(e))
         status = 1
     msg = serverProtocol.pack_create_folder_response(status)
+    main_server.send(client_ip, msg)
+
+
+def _handle_share_file(main_server, db, client_ip, path, username):
+    status = 0
+    if db.username_exist(username):
+        try:
+            shutil.copy(f"{Settings.USER_FILES_PATH}/{path}", f"{Settings.USER_FILES_PATH}/{username}/shared")
+        except Exception as e:
+            print(str(e))
+            status = 1
+
+    else:
+        status = 1
+
+    msg = serverProtocol.pack_share_response(status)
     main_server.send(client_ip, msg)
 
 
