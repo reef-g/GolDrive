@@ -77,6 +77,7 @@ def _handle_login(main_server, db, client_ip, username, password):
     main_server.send(client_ip, msg)
 
     if status == 0:
+        main_server.usersByIp[username] = client_ip
         port_to_give = portsHandler.PortsHandler.get_next_port()
         files_q = queue.Queue()
         files_server = serverComm.ServerComm(port_to_give, files_q, 6)
@@ -174,9 +175,19 @@ def _handle_create_dir(main_server, db, client_ip, path):
 
 def _handle_share_file(main_server, db, client_ip, path, username):
     status = 0
+    user_who_shared = path.split('/')[0]
+    path_to_add = f"{Settings.USER_FILES_PATH}/{username}/Shared/{user_who_shared}"
+
     if db.username_exist(username):
+        if not os.path.isdir(path_to_add):
+            try:
+                os.mkdir(path_to_add)
+            except Exception as e:
+                print(str(e))
+
         try:
-            shutil.copy(f"{Settings.USER_FILES_PATH}/{path}", f"{Settings.USER_FILES_PATH}/{username}/shared")
+            shutil.copy(f"{Settings.USER_FILES_PATH}/{path}", f"{Settings.USER_FILES_PATH}/{username}/Shared/"
+                                                              f"{user_who_shared}")
         except Exception as e:
             print(str(e))
             status = 1
@@ -186,6 +197,10 @@ def _handle_share_file(main_server, db, client_ip, path, username):
 
     msg = serverProtocol.pack_share_response(status)
     main_server.send(client_ip, msg)
+
+    if username in main_server.usersByIp:
+        msg = serverProtocol.pack_add_shared_file(path)
+        main_server.send(main_server.usersByIp[user_who_shared], msg)
 
 
 if __name__ == '__main__':

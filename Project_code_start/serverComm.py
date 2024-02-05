@@ -18,6 +18,7 @@ class ServerComm:
         self.recv_q = recv_q
         self.serverSocket = socket.socket()
         self.openClients = {}  # [socket]:[ip, key]
+        self.usersByIp = {}
         self.isRunning = False
         self.msgLenBytes = msg_len_bytes
 

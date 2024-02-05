@@ -188,6 +188,14 @@ def pack_verify_email_message():
     return "17"
 
 
+def pack_add_shared_file(path):
+    """
+    :param path: path of file to add to client branches
+    :return: opcode + length of path + path
+    """
+    return f"14{str(len(str(path))).zfill(2)}{path}"
+
+
 if __name__ == '__main__':
     code, data_from_message = unpack_message("1210reef/reef1000012")
     dataa = pack_files_message("reef")

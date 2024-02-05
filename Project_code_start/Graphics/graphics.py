@@ -193,6 +193,7 @@ class FilesPanel(wx.Panel):
         pub.subscribe(self._rename_obj, "renameOk")
         pub.subscribe(self._upload_object, "uploadOk")
         pub.subscribe(self._create_dir, "createOk")
+        pub.subscribe(self._add_shared_file, "addFile")
         pub.subscribe(self._files_comm_update, "update_file_comm")
 
         self.drag_data = wx.CustomDataObject("Text")
@@ -455,6 +456,18 @@ class FilesPanel(wx.Panel):
         self.shared_files_img.Hide()
         self.curPath += "/Shared".lstrip('/')
         self.show_files("Shared")
+
+    def _add_shared_file(self, path):
+        user_who_shared, file = path.split('/')
+        for branch in self.branches:
+            if branch[0] == "Shared":
+                branch[1].append(user_who_shared)
+                branch[1].sort()
+                break
+
+        self.branches.append((f'Shared/{user_who_shared}'.lstrip('/'), [], []))
+        self.branches[-1][2].append(file)
+        self.show_files(self.curPath)
 
 
 class RegistrationPanel(wx.Panel):
