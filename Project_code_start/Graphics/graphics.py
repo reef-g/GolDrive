@@ -228,7 +228,7 @@ class FilesPanel(wx.Panel):
     def show_files(self, path):
         self.scroll_panel.DestroyChildren()
 
-        if self.curPath.split('/')[-1] != "Shared":
+        if self.curPath.split('/')[0] != "Shared":
             self.shared_files_img.Show()
 
         if path == "":
@@ -458,16 +458,28 @@ class FilesPanel(wx.Panel):
         self.show_files("Shared")
 
     def _add_shared_file(self, path):
-        user_who_shared, file = path.split('/')
+        print(path)
+        user_who_shared, file = path.split('/')[0], path.split('/')[-1]
         for branch in self.branches:
             if branch[0] == "Shared":
-                branch[1].append(user_who_shared)
-                branch[1].sort()
+                if user_who_shared not in branch[1]:
+                    branch[1].append(user_who_shared)
+                    branch[1].sort()
                 break
 
-        self.branches.append((f'Shared/{user_who_shared}'.lstrip('/'), [], []))
-        self.branches[-1][2].append(file)
-        self.show_files(self.curPath)
+        if not any(branch[0] == f"Shared/{user_who_shared}" for branch in self.branches):
+            self.branches.append((f'Shared/{user_who_shared}', [], []))
+            self.branches[-1][2].append(file)
+            self.branches[-1].sort()
+
+        else:
+            for branch in self.branches:
+                if branch[0] == f"Shared/{user_who_shared}":
+                    branch[2].append(file)
+                    branch[2].sort()
+
+        if self.curPath == f"Shared/{user_who_shared}":
+            self.show_files(self.curPath)
 
 
 class RegistrationPanel(wx.Panel):
