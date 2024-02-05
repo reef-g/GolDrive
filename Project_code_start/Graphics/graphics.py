@@ -470,7 +470,7 @@ class FilesPanel(wx.Panel):
         if not any(branch[0] == f"Shared/{user_who_shared}" for branch in self.branches):
             self.branches.append((f'Shared/{user_who_shared}', [], []))
             self.branches[-1][2].append(file)
-            self.branches[-1].sort()
+            self.branches[-1][2].sort()
 
         else:
             for branch in self.branches:
@@ -478,8 +478,7 @@ class FilesPanel(wx.Panel):
                     branch[2].append(file)
                     branch[2].sort()
 
-        if self.curPath == f"Shared/{user_who_shared}":
-            self.show_files(self.curPath)
+        self.show_files(self.curPath)
 
 
 class RegistrationPanel(wx.Panel):
