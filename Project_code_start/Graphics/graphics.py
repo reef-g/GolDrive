@@ -295,6 +295,7 @@ class FilesPanel(wx.Panel):
 
     def _get_branches(self, branches):
         self.branches = branches
+        self.copied_file = None
 
         for branch in branches:
             branch[1].sort()
@@ -593,11 +594,14 @@ class FilesPanel(wx.Panel):
         self.show_files(self.curPath)
 
     def paste_file_request(self, event):
-        src = f"{self.parent.username}/{self.copied_file}"
-        dst = f"{self.parent.username}/{self.curPath}".rstrip('/')
+        if self.copied_file:
+            src = f"{self.parent.username}/{self.copied_file}"
+            dst = f"{self.parent.username}/{self.curPath}".rstrip('/')
 
-        msg = clientProtocol.pack_paste_file_request(src, dst)
-        self.comm.send(msg)
+            msg = clientProtocol.pack_paste_file_request(src, dst)
+            self.comm.send(msg)
+        else:
+            self.parent.show_pop_up(f"Your clipboard is empty.", "Error")
 
     def _handle_paste_file(self):
         file_name = self.copied_file.split('/')[-1]

@@ -131,9 +131,6 @@ def _handle_open_file(status, Type, data):
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't open file.", title="Error")
 
 
-
-
-
 def _handle_upload_file(status, path):
     if status == "0":
         wx.CallAfter(pub.sendMessage, "uploadOk", path=path)
