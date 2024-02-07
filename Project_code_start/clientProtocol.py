@@ -176,6 +176,18 @@ def pack_change_email_request(email):
     return f"05{str(len(email)).zfill(2)}{email}"
 
 
+def pack_move_file_folder_request(src, dst):
+    return f"18{str(len(str(src))).zfill(2)}{src}{str(len(str(dst))).zfill(2)}{dst}"
+
+
+def pack_paste_file_request(src, dst):
+    return f"19{str(len(str(src))).zfill(2)}{src}{str(len(str(dst))).zfill(2)}{dst}"
+
+
+def pack_open_file_request(path, Type):
+    return f"20{str(len(str(path))).zfill(2)}{path}{str(len(str(Type))).zfill(2)}{Type}"
+
+
 if __name__ == '__main__':
     print(unpack_files_message("000007folder10009fil1.docx\n07folder10008checking0000\n16folder1\\checking00000000"))
 

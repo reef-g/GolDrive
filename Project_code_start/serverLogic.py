@@ -30,7 +30,8 @@ def _handle_messages(main_server, msg_q):
     my_db = DB.DB()
 
     recv_commands = {"01": _handle_registration, "02": _handle_login, "08": _handle_rename_file,
-                     "09": _handle_share_file, "10": _handle_delete_file, "13": _handle_create_dir}
+                     "09": _handle_share_file, "10": _handle_delete_file, "13": _handle_create_dir,
+                     "18": _handle_move_file, "19": _handle_paste_file}
 
     while True:
         ip, data = msg_q.get()
@@ -38,6 +39,8 @@ def _handle_messages(main_server, msg_q):
 
         if protocol_num in recv_commands.keys():
             recv_commands[protocol_num](main_server, my_db, ip, *params)
+        else:
+            print(f"{protocol_num} not in recv commands.")
 
 
 def _handle_registration(main_server, db, client_ip, username, password, mail):
@@ -57,7 +60,7 @@ def _handle_registration(main_server, db, client_ip, username, password, mail):
     if ans == 0:
         if not os.path.isdir(f"{Settings.USER_FILES_PATH}/{username}"):
             os.mkdir(f"{Settings.USER_FILES_PATH}/{username}")
-            os.mkdir(f"{Settings.USER_FILES_PATH}/{username}/Shared")
+            os.mkdir(f"{Settings.USER_FILES_PATH}/{username}/@#$SHAREDFILES$#@")
 
 
 def _handle_login(main_server, db, client_ip, username, password):
@@ -89,7 +92,7 @@ def _handle_login(main_server, db, client_ip, username, password):
 
 
 def handle_files(files_server, files_q):
-    recv_commands = {"11": _handle_download_file, "12": _handle_upload_file}
+    recv_commands = {"11": _handle_download_file, "12": _handle_upload_file, "20": _handle_open_file}
 
     while True:
         ip, data = files_q.get()
@@ -139,7 +142,19 @@ def _handle_download_file(main_server, client_ip, path, selected_path):
     :param path: the path of the file to download
     :return: returns the data of the file
     """
-    main_server.send_file(client_ip, path, selected_path)
+    params = ("11", path, selected_path)
+    main_server.send_file(client_ip, params)
+
+
+def _handle_open_file(main_server, client_ip, Type, path):
+    """
+    :param main_server: the server object
+    :param client_ip: the clients ip
+    :param path: the path of the file to download
+    :return: returns the data of the file
+    """
+    params = ("20", Type, path)
+    main_server.send_file(client_ip, params)
 
 
 def _handle_upload_file(main_server, client_ip, path, data):
@@ -176,7 +191,7 @@ def _handle_create_dir(main_server, db, client_ip, path):
 def _handle_share_file(main_server, db, client_ip, path, username):
     status = 0
     user_who_shared = path.split('/')[0]
-    path_to_add = f"{Settings.USER_FILES_PATH}/{username}/Shared/{user_who_shared}"
+    path_to_add = f"{Settings.USER_FILES_PATH}/{username}/@#$SHAREDFILES$#@/{user_who_shared}"
 
     if db.username_exist(username):
         if not os.path.isdir(path_to_add):
@@ -186,7 +201,7 @@ def _handle_share_file(main_server, db, client_ip, path, username):
                 print(str(e))
 
         try:
-            shutil.copy(f"{Settings.USER_FILES_PATH}/{path}", f"{Settings.USER_FILES_PATH}/{username}/Shared/"
+            shutil.copy(f"{Settings.USER_FILES_PATH}/{path}", f"{Settings.USER_FILES_PATH}/{username}/@#$SHAREDFILES$#@/"
                                                               f"{user_who_shared}")
         except Exception as e:
             print(str(e))
@@ -200,7 +215,37 @@ def _handle_share_file(main_server, db, client_ip, path, username):
 
     if username in main_server.usersByIp:
         msg = serverProtocol.pack_add_shared_file(path)
-        main_server.send(main_server.usersByIp[user_who_shared], msg)
+        main_server.send(main_server.usersByIp[username], msg)
+
+
+def _handle_move_file(main_server, db, client_ip, src, dst):
+    status = 0
+    try:
+        shutil.move(f"{Settings.USER_FILES_PATH}/{src}", f"{Settings.USER_FILES_PATH}/{dst}")
+    except Exception as e:
+        print(str(e))
+        status = 1
+
+    msg = serverProtocol.pack_move_file_response(status, dst)
+    main_server.send(client_ip, msg)
+
+
+def _handle_paste_file(main_server, db, client_ip, src, dst):
+    status = 0
+    try:
+        shutil.copy(f"{Settings.USER_FILES_PATH}/{src}", f"{Settings.USER_FILES_PATH}/{dst}")
+    except Exception as e:
+        print(str(e))
+        status = 1
+
+    msg = serverProtocol.pack_paste_file_response(status)
+    main_server.send(client_ip, msg)
+
+
+
+
+
+
 
 
 if __name__ == '__main__':

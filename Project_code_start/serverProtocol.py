@@ -168,7 +168,7 @@ def pack_change_username_response(response):
     return f"04{str(len(str(response))).zfill(2)}{response}"
 
 
-def pack_change_passowrd_response(response):
+def pack_change_password_response(response):
     """
     :param response: response to change password
     :return: opcode + length + response
@@ -194,6 +194,24 @@ def pack_add_shared_file(path):
     :return: opcode + length of path + path
     """
     return f"14{str(len(str(path))).zfill(2)}{path}"
+
+
+def pack_move_file_response(status, new_folder):
+    """
+    :param status:
+    :param new_folder:
+    :return:
+    """
+    return f"18{str(len(str(status))).zfill(2)}{status}{str(len(str(new_folder))).zfill(2)}{new_folder}"
+
+
+def pack_paste_file_response(status):
+    return f"19{str(len(str(status))).zfill(2)}{status}"
+
+
+def pack_open_file_response(status, Type, datalen):
+    return f"20{str(len(str(status))).zfill(2)}{status}{str(len(str(datalen))).zfill(2)}{datalen}" \
+           f"{str(len(str(Type))).zfill(2)}{Type}"
 
 
 if __name__ == '__main__':

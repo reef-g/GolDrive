@@ -39,9 +39,10 @@ class ClientComm:
                 self.recvQ.put(decrypted_data)
             else:
                 opcode, params = clientProtocol.unpack_message(decrypted_data)
-                if opcode == "11":
+                if opcode == "11" or opcode == "20":
                     if params[0] == "0":
-                        self._recv_file(*params[1:])
+                        params = (opcode, *params[1:])
+                        self._recv_file(params)
                     else:
                         self.recvQ.put(decrypted_data)
                 else:
@@ -75,10 +76,17 @@ class ClientComm:
     def _close(self):
         self.socket.close()
 
-    def _recv_file(self, file_len, path, selected_path):
+    def _recv_file(self, params):
+        opcode = params[0]
+        path, selected_path, Type = "", "", ""
+        if opcode == "11":
+            file_len, path, selected_path = params[1:]
+            path = '/'.join(path.split('/')[1::]).lstrip('/')
+        else:
+            file_len, Type = params[1:]
+
         data = bytearray()
         file_len = int(file_len)
-        path = '/'.join(path.split('/')[1::]).lstrip('/')
 
         try:
             while len(data) < file_len:
@@ -90,11 +98,18 @@ class ClientComm:
                     break
 
         except Exception as e:
-            self.recvQ.put(("11", '1', path, selected_path, None))
+            if opcode == "11":
+                self.recvQ.put(("11", '1', path, selected_path, None))
+            else:
+                self.recvQ.put(("20", '1', Type, None))
+
             print("main server in recv file comm ", str(e))
             self._close()
         else:
-            self.recvQ.put(("11", '0', path, selected_path, self.enc_obj.dec_msg(data)))
+            if opcode == "11":
+                self.recvQ.put(("11", '0', path, selected_path, self.enc_obj.dec_msg(data)))
+            else:
+                self.recvQ.put(("20", '0', Type, self.enc_obj.dec_msg(data)))
 
     def send_file(self, path, currPath):
         try:

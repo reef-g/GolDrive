@@ -4,6 +4,7 @@ import wx
 import wx.lib.scrolledpanel
 from pubsub import pub
 import clientProtocol
+import secrets
 
 
 class MyFrame(wx.Frame):
@@ -113,16 +114,50 @@ class LoginPanel(wx.Panel):
             self.comm.send(msg2send)
 
 
+class MyDropTarget(wx.DropTarget):
+    def __init__(self, panel):
+        wx.DropTarget.__init__(self)
+        self.panel = panel
+
+        self.name = wx.TextDataObject()
+        self.SetDataObject(self.name)
+        # Specify the data format you want to accept
+        self.data = wx.TextDataObject()
+        self.SetDataObject(self.data)
+
+    def OnDragOver(self, x, y, default):
+        # Check if the cursor is above an image using the panel's method
+        cursor_to_show = wx.DragNone
+        isAbove, name = self.panel.is_cursor_above_image()
+
+        if isAbove:
+            # Visual feedback for a valid drop location
+            cursor_to_show = wx.DragCopy
+            self.data = name
+
+        return cursor_to_show
+
+    def OnData(self, x, y, result):
+        # Get the dropped data
+        dragged_name = self.name.GetText()
+        dropped_name = self.data.GetText()
+        # Process the dropped data (you can customize this part)
+        if dragged_name and dropped_name:
+            self.panel.handle_dropped_item(dragged_name, dropped_name)
+
+        return result
+
+
 class FilesPanel(wx.Panel):
     def __init__(self, parent, frame, comm):
         wx.Panel.__init__(self, parent, pos=wx.DefaultPosition, size=(1920, 1080), style=wx.SIMPLE_BORDER)
+
         self.grid_sizer = None
         self.frame = frame
         self.comm = comm
         self.parent = parent
         self.files_comm = None
 
-        # self.png = wx.StaticBitmap(self, -1, wx.Bitmap(r"C:\Users\talmid\Pictures\שקופית1.JPG", wx.BITMAP_TYPE_ANY))
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.title_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -133,6 +168,7 @@ class FilesPanel(wx.Panel):
         self.title_sizer.Add(self.title)
 
         self.curPath = None
+        self.copied_file = None
         self.file_name = ""
         self.filesObj = {}
 
@@ -161,30 +197,35 @@ class FilesPanel(wx.Panel):
         self.icons_and_files_sizer.Add(self.icons_sizer)
 
         self.scroll_panel.SetSizer(self.files_sizer)
+        self.scroll_panel.Bind(wx.EVT_RIGHT_DOWN, self.show_menu)
 
-        self.login_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.back_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        login_button = wx.Button(self, label="BACK TO LOGIN")
+        self.login_button = wx.Button(self, label="BACK TO LOGIN")
         self.backButton = wx.Button(self, label="BACK")
         self.uploadButton = wx.Button(self, label="UPLOAD FILE")
         self.createDirButton = wx.Button(self, label="CREATE DIRECTORY")
-        self.Bind(wx.EVT_BUTTON, self.login_control, login_button)
-        self.Bind(wx.EVT_BUTTON, self.back_dir, self.backButton)
-        self.Bind(wx.EVT_BUTTON, self.upload_file_request, self.uploadButton)
-        self.Bind(wx.EVT_BUTTON, self.create_dir_request, self.createDirButton)
-        self.login_sizer.Add(login_button)
-        self.login_sizer.AddSpacer(20)
-        self.back_sizer.Add(self.backButton)
-        self.back_sizer.AddSpacer(20)
-        self.login_sizer.Add(self.back_sizer)
-        self.login_sizer.Add(self.uploadButton)
-        self.login_sizer.AddSpacer(20)
-        self.login_sizer.Add(self.createDirButton)
+        self.pasteButton = wx.Button(self, label="PASTE")
+
+        self.login_button.Bind(wx.EVT_BUTTON, self.login_control)
+        self.backButton.Bind(wx.EVT_BUTTON, self.back_dir)
+        self.uploadButton.Bind(wx.EVT_BUTTON, self.upload_file_request)
+        self.createDirButton.Bind(wx.EVT_BUTTON, self.create_dir_request)
+        self.pasteButton.Bind(wx.EVT_BUTTON, self.paste_file_request)
+
+        self.buttons_sizer.Add(self.backButton)
+        self.buttons_sizer.AddSpacer(20)
+        self.buttons_sizer.Add(self.login_button)
+        self.buttons_sizer.AddSpacer(20)
+        self.buttons_sizer.Add(self.uploadButton)
+        self.buttons_sizer.AddSpacer(20)
+        self.buttons_sizer.Add(self.createDirButton)
+        self.buttons_sizer.AddSpacer(20)
+        self.buttons_sizer.Add(self.pasteButton)
 
         self.sizer.AddMany([(self.title_sizer, 0, wx.CENTER),
                             (self.icons_and_files_sizer, 0, wx.CENTER),
-                            (self.login_sizer, 0, wx.CENTER)])
+                            (self.buttons_sizer, 0, wx.CENTER)])
 
         self.SetSizer(self.sizer)
 
@@ -194,13 +235,57 @@ class FilesPanel(wx.Panel):
         pub.subscribe(self._upload_object, "uploadOk")
         pub.subscribe(self._create_dir, "createOk")
         pub.subscribe(self._add_shared_file, "addFile")
+        pub.subscribe(self._move_file, "moveFile")
+        pub.subscribe(self._handle_paste_file, "pasteFile")
         pub.subscribe(self._files_comm_update, "update_file_comm")
-
-        self.drag_data = wx.CustomDataObject("Text")
-        self.drag_source = None
 
         self.Layout()
         self.Hide()
+        self.drop_target = MyDropTarget(self)
+        self.SetDropTarget(self.drop_target)
+
+    def show_menu(self, event):
+        flag = True
+        if self.curPath == "":
+            flag = False
+        self.PopupMenu(MenuFeatures(self, flag))
+
+    def start_drag(self, event):
+        # Start a drag-and-drop operation when an item is left-clicked
+        item_text = event.GetEventObject()
+        data = wx.TextDataObject(item_text.GetName())
+        self.drop_target.name = data
+        drop_source = wx.DropSource(item_text)
+        drop_source.SetData(data)
+        drop_source.DoDragDrop(wx.Drag_CopyOnly)
+
+    def handle_dropped_item(self, item_dropped, dropped_to_item):
+        # Process the dropped item (customize this part based on your needs)
+        self.file_name = item_dropped
+        src = f"{self.parent.username}/{self.curPath}/{item_dropped}".replace('//', '/')
+        dst = f"{self.parent.username}/{self.curPath}/{dropped_to_item}".replace('//', '/')
+
+        msg = clientProtocol.pack_move_file_folder_request(src, dst)
+        self.comm.send(msg)
+
+    def is_cursor_above_image(self):
+        # Get the mouse position
+        mouse_position = wx.GetMousePosition()
+        screen_position = self.scroll_panel.GetScreenPosition()
+        mouse_x, mouse_y = mouse_position.x - screen_position.x, mouse_position.y - screen_position.y
+        flag = False
+        text_data_object = None
+
+        # Iterate over sizer items to check if the cursor is over an image
+        for item in self.scroll_panel.GetChildren():
+            item_rect = item.GetRect()
+            if self.filesObj[f"{self.curPath}/{item.GetName()}".lstrip('/')][1]:
+                if item_rect.Contains(mouse_x, mouse_y):
+                    flag = True
+                    text_data_object = wx.TextDataObject()
+                    text_data_object.SetText(item.GetName())
+
+        return flag, text_data_object
 
     def _files_comm_update(self, filecomm):
         self.files_comm = filecomm
@@ -221,15 +306,18 @@ class FilesPanel(wx.Panel):
 
         for branch in branches:
             if branch[0] == "":
-                branch[1].remove("Shared")
+                branch[1].remove("@#$SHAREDFILES$#@")
                 self.curPath = ""
                 self.show_files(self.curPath)
 
     def show_files(self, path):
         self.scroll_panel.DestroyChildren()
 
-        if self.curPath.split('/')[0] != "Shared":
+        if "@#$SHAREDFILES$#@" not in self.curPath.split('/'):
             self.shared_files_img.Show()
+        else:
+            split_path = self.curPath.split('/')
+            path = '/'.join(split_path[split_path.index("@#$SHAREDFILES$#@"):])
 
         if path == "":
             self.backButton.Show(False)
@@ -277,6 +365,9 @@ class FilesPanel(wx.Panel):
             where_bind = wx.EVT_RIGHT_DOWN
             if dir_file_flag:
                 where_bind = wx.EVT_LEFT_DOWN
+            else:
+                item_text.Bind(wx.EVT_LEFT_DOWN, self.start_drag)
+                item_image.Bind(wx.EVT_LEFT_DOWN, self.start_drag)
 
             item_text.Bind(where_bind, self.select_file)
             item_image.Bind(where_bind, self.select_file)
@@ -298,7 +389,13 @@ class FilesPanel(wx.Panel):
     def select_file(self, event):
         obj = event.GetEventObject()
 
-        if self.filesObj[f"{self.curPath}/{obj.GetName()}".lstrip('/')][1]:
+        path_to_find = f"{self.curPath}/{obj.GetName()}".lstrip('/')
+
+        if path_to_find not in self.filesObj and "@#$SHAREDFILES$#@" in path_to_find:
+            split_path = self.curPath.split('/')
+            path_to_find = '/'.join(split_path[split_path.index("@#$SHAREDFILES$#@"):]) + '/' + obj.GetName()
+
+        if self.filesObj[path_to_find][1]:
             self.chose_dir(obj.GetName())
 
         else:
@@ -422,10 +519,13 @@ class FilesPanel(wx.Panel):
         dlg.Destroy()
 
         if result == wx.ID_OK:
-            self.file_name = dlg.GetValue()
-            full_path = f"{self.parent.username}/{self.curPath}/{self.file_name}".lstrip("/")
-            msg2send = clientProtocol.pack_create_folder_request(full_path)
-            self.comm.send(msg2send)
+            if dlg.GetValue() != "@#$SHAREDFILES$#@":
+                self.file_name = dlg.GetValue()
+                full_path = f"{self.parent.username}/{self.curPath}/{self.file_name}".lstrip("/")
+                msg2send = clientProtocol.pack_create_folder_request(full_path)
+                self.comm.send(msg2send)
+            else:
+                self.parent.show_pop_up(f"Can't create a folder with that name, please choose a different name.", "Error")
 
     def _create_dir(self):
         for branch in self.branches:
@@ -454,31 +554,70 @@ class FilesPanel(wx.Panel):
 
     def show_shared_files(self, event):
         self.shared_files_img.Hide()
-        self.curPath += "/Shared".lstrip('/')
-        self.show_files("Shared")
+        self.curPath += "/@#$SHAREDFILES$#@"
+        self.curPath.lstrip('/')
+        self.show_files("@#$SHAREDFILES$#@")
 
     def _add_shared_file(self, path):
-        print(path)
         user_who_shared, file = path.split('/')[0], path.split('/')[-1]
         for branch in self.branches:
-            if branch[0] == "Shared":
+            if branch[0] == "@#$SHAREDFILES$#@":
                 if user_who_shared not in branch[1]:
                     branch[1].append(user_who_shared)
                     branch[1].sort()
                 break
 
-        if not any(branch[0] == f"Shared/{user_who_shared}" for branch in self.branches):
-            self.branches.append((f'Shared/{user_who_shared}', [], []))
+        if not any(branch[0] == f"@#$SHAREDFILES$#@/{user_who_shared}" for branch in self.branches):
+            self.branches.append((f'@#$SHAREDFILES$#@/{user_who_shared}', [], []))
             self.branches[-1][2].append(file)
             self.branches[-1][2].sort()
 
         else:
             for branch in self.branches:
-                if branch[0] == f"Shared/{user_who_shared}":
+                if branch[0] == f"@#$SHAREDFILES$#@/{user_who_shared}":
                     branch[2].append(file)
                     branch[2].sort()
 
         self.show_files(self.curPath)
+
+    def _move_file(self, path):
+        path = "/".join(path.split('/')[1::])
+
+        for branch in self.branches:
+            if branch[0] == self.curPath:
+                branch[2].remove(self.file_name)
+
+            if branch[0] == path:
+                branch[2].append(self.file_name)
+
+        self.show_files(self.curPath)
+
+    def paste_file_request(self, event):
+        src = f"{self.parent.username}/{self.copied_file}"
+        dst = f"{self.parent.username}/{self.curPath}".rstrip('/')
+
+        msg = clientProtocol.pack_paste_file_request(src, dst)
+        self.comm.send(msg)
+
+    def _handle_paste_file(self):
+        file_name = self.copied_file.split('/')[-1]
+
+        for branch in self.branches:
+            if branch[0] == self.curPath:
+                branch[2].append(file_name)
+                branch[2].sort()
+                break
+
+        self.show_files(self.curPath)
+
+    def open_file_request(self, name):
+        try:
+            msg2send = clientProtocol.pack_open_file_request(
+                f"{self.parent.username}/{self.curPath}/{name}".replace("//", ''), name.split('.')[-1]
+            )
+            self.files_comm.send(msg2send)
+        except Exception as e:
+            print(str(e))
 
 
 class RegistrationPanel(wx.Panel):
@@ -553,18 +692,16 @@ class PopMenu(wx.Menu):
 
         self.AppendSeparator()
 
-        self.Append(wx.MenuItem(self, -1, 'delete file'))
-
-        self.Append(wx.MenuItem(self, -1, 'rename file'))
-
-        self.Append(wx.MenuItem(self, -1, 'download file'))
-
-        self.Append(wx.MenuItem(self, -1, 'share file'))
+        self.Append(wx.MenuItem(self, -1, 'Delete file'))
+        self.Append(wx.MenuItem(self, -1, 'Rename file'))
+        self.Append(wx.MenuItem(self, -1, 'Download file'))
+        self.Append(wx.MenuItem(self, -1, 'Share file'))
+        self.Append(wx.MenuItem(self, -1, 'Copy file'))
+        self.Append(wx.MenuItem(self, -1, 'Open file'))
 
         self.AppendSeparator()
 
-        cancel_item = wx.MenuItem(self, -1, "Cancel")
-        self.Append(cancel_item)
+        self.Append(wx.MenuItem(self, -1, "Cancel"))
 
         # Bind the menu item click event
         self.Bind(wx.EVT_MENU, self.on_menu_item_click)
@@ -574,14 +711,55 @@ class PopMenu(wx.Menu):
         clicked_item = self.FindItemById(clicked_item_id)
 
         item = clicked_item.GetItemLabelText()
-        if item == "delete file":
+        if item == "Delete file":
             self.parent.delete_file_request(self.name)
-        elif item == "rename file":
+        elif item == "Rename file":
             self.parent.rename_file_request(self.name)
-        elif item == "download file":
+        elif item == "Download file":
             self.parent.download_file_request(self.name)
-        elif item == "share file":
+        elif item == "Share file":
             self.parent.share_file_request(self.name)
+        elif item == "Copy file":
+            self.parent.copied_file = f"{self.parent.curPath}/{self.name}".lstrip('/')
+        elif item == "Open file":
+            self.parent.open_file_request(self.name)
+
+
+class MenuFeatures(wx.Menu):
+
+    def __init__(self, parent, show_back):
+        super(MenuFeatures, self).__init__()
+
+        self.parent = parent
+        self.pos = wx.GetMousePosition()
+
+        self.Append(wx.MenuItem(self, -1, 'Upload file'))
+        self.Append(wx.MenuItem(self, -1, 'Create new directory'))
+        self.Append(wx.MenuItem(self, -1, 'Paste file'))
+        self.back_item = wx.MenuItem(self, -1, 'Go back')
+        self.Append(self.back_item)
+        self.Enable(self.back_item.GetId(), show_back)
+
+        self.AppendSeparator()
+
+        self.Append(wx.MenuItem(self, -1, "Cancel"))
+
+        # Bind the menu item click event
+        self.Bind(wx.EVT_MENU, self.on_menu_item_click)
+
+    def on_menu_item_click(self, event):
+        clicked_item_id = event.GetId()
+        clicked_item = self.FindItemById(clicked_item_id)
+
+        item = clicked_item.GetItemLabelText()
+        if item == "Upload file":
+            self.parent.upload_file_request(wx.CommandEvent)
+        elif item == "Create new directory":
+            self.parent.create_dir_request(wx.CommandEvent)
+        elif item == "Paste file":
+            self.parent.paste_file_request(wx.CommandEvent)
+        elif item == "Go back":
+            self.parent.back_dir(wx.CommandEvent)
 
 
 if __name__ == '__main__':

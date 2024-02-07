@@ -158,7 +158,15 @@ class ServerComm:
             decData = self.openClients[client][1].dec_msg(data)
             self.recv_q.put((ip, ("12", file_path, decData)))
 
-    def send_file(self, client_ip, path, selected_path):
+    def send_file(self, client_ip, params):
+        path, selected_path, Type = "", "", ""
+        if params[0] == "11":
+            path = params[1]
+            selected_path = params[2]
+        else:
+            Type = params[2]
+            path = params[1]
+
         client_socket = self._find_socket_by_ip(client_ip)
         if client_socket:
             status = 0
@@ -168,12 +176,19 @@ class ServerComm:
             except Exception as e:
                 print(str(e))
                 status = 1
-                msg = serverProtocol.pack_file_download_response(status, 0, path, selected_path)
+                if params[0] == "11":
+                    msg = serverProtocol.pack_file_download_response(status, 0, path, selected_path)
+                else:
+                    msg = serverProtocol.pack_open_file_response(status, Type, 0)
                 self.send(client_ip, msg)
 
             else:
                 cryptFile = self.openClients[client_socket][1].enc_msg(data)
-                msg = serverProtocol.pack_file_download_response(status, len(cryptFile), path, selected_path)
+                if params[0] == "11":
+                    msg = serverProtocol.pack_file_download_response(status, len(cryptFile), path, selected_path)
+                else:
+                    msg = serverProtocol.pack_open_file_response(status, Type, len(cryptFile))
+
                 self.send(client_ip, msg)
                 try:
                     client_socket.send(cryptFile)
