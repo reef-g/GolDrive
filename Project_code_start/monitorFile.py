@@ -1,4 +1,6 @@
 import win32file
+import subprocess
+import time
 
 FILE_LIST_DIRECTORY = 0x0001
 FILE_NOTIFY_CHANGE_FILE_NAME = 0x0001
@@ -20,7 +22,8 @@ file_actions = {
         "Renamed new name"
 }
 
-def monitor(path_to_watch):
+
+def monitor(path_to_watch, q):
     directory_handle = win32file.CreateFileW(
         path_to_watch,
         FILE_LIST_DIRECTORY,  # No access (required for directories)
@@ -33,22 +36,23 @@ def monitor(path_to_watch):
     if directory_handle == -1:
         print("Error opening directory")
     else:
-        result = win32file.ReadDirectoryChangesW(
-            directory_handle,
-            4096,
-            True,  # Watch subtree
-            FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME,
-            None
-        )
+        while True:
+            result = win32file.ReadDirectoryChangesW(
+                directory_handle,
+                4096,
+                True,  # Watch subtree
+                FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME,
+                None
+            )
 
-        actions = ", ".join(map(lambda action: f"{file_actions[action[0]].title()} {action[1]}", result))
-        print(actions)
-
-        return actions
+            for action in result:
+                if file_actions[action[0]] == "Modified":
+                    q.put("Changed")
 
 
 if __name__ == '__main__':
     path = input("Enter file: ")
     while True:
-        print(monitor(path))
+        print(monitor(path,))
+        print("asdasd")
 

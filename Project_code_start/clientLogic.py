@@ -9,8 +9,8 @@ from pubsub import pub
 import wx
 import secrets
 import subprocess
+import psutil
 import monitorFile
-import time
 
 
 def main_loop():
@@ -117,31 +117,39 @@ def _handle_open_file(file_comm, status, file_path, data):
     if status == "0":
         # creating random name
         ascii_values = list(range(65, 91)) + list(range(97, 123)) + list(range(48, 58))
-        random_name = ''.join(chr(secrets.choice(ascii_values)) for _ in range(16))
-        path = os.getcwd() + "\\" + random_name
-        while os.path.isdir(path):
+
+        cwd = os.getcwd().replace('\\', '/')
+        while True:
             random_name = ''.join(chr(secrets.choice(ascii_values)) for _ in range(16))
-            path = os.getcwd() + "\\" + random_name
+            path = f"{cwd}/{random_name}"
+            if not os.path.isdir(path):
+                break
 
         try:
             os.mkdir(path)
-            path = f'{path}/{file_name}'
-            with open(path, 'wb' if type(data) == bytes else 'w') as f:
+
+            with open(f'{path}/{file_name}', 'wb' if type(data) == bytes else 'w') as f:
                 f.write(data)
 
-            process = subprocess.Popen(['start', path], shell=True)
+            file_path = f"{path}/{file_name}"
+
+            subprocess.Popen(['start', file_path], shell=True)
+
         except Exception as e:
             wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't open file.", title="Error")
             print(str(e))
         else:
-            time.sleep(0.02)
-            # while file is runninng
+            monitor_q = queue.Queue()
+
+            monitor_thread = threading.Thread(target=monitorFile.monitor, args=(path, monitor_q))
+            monitor_thread.start()
+
             while True:
+                data = monitor_q.get()
+                print(data)
 
-                print(path)
-                a = monitorFile.monitor(path)
-                print(a)
 
+            print("Exited")
     else:
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't open file.", title="Error")
 
