@@ -184,8 +184,8 @@ def pack_paste_file_request(src, dst):
     return f"19{str(len(str(src))).zfill(2)}{src}{str(len(str(dst))).zfill(2)}{dst}"
 
 
-def pack_open_file_request(path, Type):
-    return f"20{str(len(str(path))).zfill(2)}{path}{str(len(str(Type))).zfill(2)}{Type}"
+def pack_open_file_request(path):
+    return f"20{str(len(str(path))).zfill(2)}{path}"
 
 
 if __name__ == '__main__':

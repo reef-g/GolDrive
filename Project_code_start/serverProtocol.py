@@ -8,7 +8,6 @@ def unpack_message(msg):
     :param msg: message to unpack
     :return: tuple with opcode and variables
     """
-
     opcode = msg[:2]
     data_from_msg = []
     msg = msg[2:]
@@ -209,9 +208,9 @@ def pack_paste_file_response(status):
     return f"19{str(len(str(status))).zfill(2)}{status}"
 
 
-def pack_open_file_response(status, Type, datalen):
+def pack_open_file_response(status, file_path, datalen):
     return f"20{str(len(str(status))).zfill(2)}{status}{str(len(str(datalen))).zfill(2)}{datalen}" \
-           f"{str(len(str(Type))).zfill(2)}{Type}"
+           f"{str(len(str(file_path))).zfill(2)}{file_path}"
 
 
 if __name__ == '__main__':

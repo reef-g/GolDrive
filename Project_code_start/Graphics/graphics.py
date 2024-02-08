@@ -509,10 +509,12 @@ class FilesPanel(wx.Panel):
 
         for branch in self.branches:
             if branch[0] == self.curPath:
-                branch[2].append(name_to_add)
-                branch[2].sort()
+                if name_to_add not in branch[2]:
+                    branch[2].append(name_to_add)
+                    branch[2].sort()
                 break
         self.show_files(self.curPath)
+        self.parent.show_pop_up(f"Uploaded {name_to_add} successfully.", "Success")
 
     def create_dir_request(self, event):
         dlg = wx.TextEntryDialog(self, f'Please enter the name for the directory:', 'Create new directory', '')
@@ -617,7 +619,7 @@ class FilesPanel(wx.Panel):
     def open_file_request(self, name):
         try:
             msg2send = clientProtocol.pack_open_file_request(
-                f"{self.parent.username}/{self.curPath}/{name}".replace("//", ''), name.split('.')[-1]
+                f"{self.parent.username}/{self.curPath}/{name}".replace("//", '/')
             )
             self.files_comm.send(msg2send)
         except Exception as e:
