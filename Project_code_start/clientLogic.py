@@ -8,8 +8,7 @@ from Graphics import graphics
 from pubsub import pub
 import wx
 import secrets
-import subprocess
-import psutil
+import shutil
 import monitorFile
 
 
@@ -93,7 +92,7 @@ def _handle_rename_file(status, new_name):
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't rename file.", title="Error")
 
 
-def _handle_download_file(status, path, selected_path, data):
+def _handle_download_file(file_comm, status, path, selected_path, data):
     file_name = path.split('/')[-1]
 
     if status == "0":
@@ -111,8 +110,9 @@ def _handle_download_file(status, path, selected_path, data):
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Download failed.", title="Error")
 
 
-def _handle_open_file(file_comm, status, file_path, data):
-    file_name = file_path.split('/')[-1]
+def _handle_open_file(file_comm, status, server_path, data):
+    file_name = server_path.split('/')[-1]
+    server_path = '/'.join(server_path.split('/')[:-1])
 
     if status == "0":
         # creating random name
@@ -127,29 +127,37 @@ def _handle_open_file(file_comm, status, file_path, data):
 
         try:
             os.mkdir(path)
-
-            with open(f'{path}/{file_name}', 'wb' if type(data) == bytes else 'w') as f:
-                f.write(data)
-
             file_path = f"{path}/{file_name}"
-
-            subprocess.Popen(['start', file_path], shell=True)
+            with open(file_path, 'wb' if type(data) == bytes else 'w') as f:
+                f.write(data)
 
         except Exception as e:
             wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't open file.", title="Error")
             print(str(e))
         else:
+            change_flag = False
             monitor_q = queue.Queue()
 
+            is_alive_thread = threading.Thread(target=monitorFile.wait_until, args=(file_path, monitor_q))
+            is_alive_thread.start()
             monitor_thread = threading.Thread(target=monitorFile.monitor, args=(path, monitor_q))
             monitor_thread.start()
 
             while True:
                 data = monitor_q.get()
-                print(data)
+                if data == "Finished":
+                    break
+                elif data == "Changed":
+                    change_flag = True
 
+            if change_flag:
+                file_comm.send_file(file_path, server_path)
 
-            print("Exited")
+            try:
+                shutil.rmtree(path)
+            except Exception as e:
+                print(str(e))
+
     else:
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't open file.", title="Error")
 

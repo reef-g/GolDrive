@@ -4,7 +4,6 @@ import wx
 import wx.lib.scrolledpanel
 from pubsub import pub
 import clientProtocol
-import secrets
 
 
 class MyFrame(wx.Frame):
@@ -13,10 +12,6 @@ class MyFrame(wx.Frame):
         self.comm = comm
         self.Maximize()
 
-        # create status bar
-        # self.CreateStatusBar(1)
-        # self.SetStatusText("GolDrive by Reef Gold - 2024")
-        # create main panel - to put on the others panels
         self.main_panel = MainPanel(self, self.comm)
         box = wx.BoxSizer(wx.VERTICAL)
         box.Add(self.main_panel, 1, wx.EXPAND)
@@ -237,6 +232,7 @@ class FilesPanel(wx.Panel):
         pub.subscribe(self._add_shared_file, "addFile")
         pub.subscribe(self._move_file, "moveFile")
         pub.subscribe(self._handle_paste_file, "pasteFile")
+        pub.subscribe(self.show_upload_status, "changeStatus")
         pub.subscribe(self._files_comm_update, "update_file_comm")
 
         self.Layout()
@@ -506,15 +502,17 @@ class FilesPanel(wx.Panel):
 
     def _upload_object(self, path):
         name_to_add = path.split('/')[-1]
-
+        text_to_show = f"Uploaded {name_to_add} successfully."
         for branch in self.branches:
             if branch[0] == self.curPath:
                 if name_to_add not in branch[2]:
                     branch[2].append(name_to_add)
                     branch[2].sort()
+                else:
+                    text_to_show = f"Updated {name_to_add} successfully."
                 break
         self.show_files(self.curPath)
-        self.parent.show_pop_up(f"Uploaded {name_to_add} successfully.", "Success")
+        self.parent.show_pop_up(text_to_show, "Success")
 
     def create_dir_request(self, event):
         dlg = wx.TextEntryDialog(self, f'Please enter the name for the directory:', 'Create new directory', '')
@@ -594,6 +592,7 @@ class FilesPanel(wx.Panel):
                 branch[2].append(self.file_name)
 
         self.show_files(self.curPath)
+        self.parent.show_pop_up("Moved file successfully", "Success")
 
     def paste_file_request(self, event):
         if self.copied_file:
@@ -607,14 +606,18 @@ class FilesPanel(wx.Panel):
 
     def _handle_paste_file(self):
         file_name = self.copied_file.split('/')[-1]
-
+        text_to_show = "Pasted file successfully."
         for branch in self.branches:
             if branch[0] == self.curPath:
-                branch[2].append(file_name)
-                branch[2].sort()
+                if file_name not in branch[2]:
+                    branch[2].append(file_name)
+                    branch[2].sort()
+                else:
+                    text_to_show = "Updated file successfully."
                 break
 
         self.show_files(self.curPath)
+        self.parent.show_pop_up(text_to_show, "Success")
 
     def open_file_request(self, name):
         try:
@@ -624,6 +627,9 @@ class FilesPanel(wx.Panel):
             self.files_comm.send(msg2send)
         except Exception as e:
             print(str(e))
+
+    def show_upload_status(self, name, percent):
+        self.parent.show_pop_up((name, percent), "Update")
 
 
 class RegistrationPanel(wx.Panel):
@@ -687,6 +693,9 @@ class PopMenu(wx.Menu):
     def __init__(self, parent, name):
         super(PopMenu, self).__init__()
 
+        image_types = ["apng", "avif", "gif", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp", "bmp", "ico",
+                       "cur", "tif", "tiff"]
+
         self.parent = parent
         self.name = name
         self.pos = wx.GetMousePosition()
@@ -703,7 +712,12 @@ class PopMenu(wx.Menu):
         self.Append(wx.MenuItem(self, -1, 'Download file'))
         self.Append(wx.MenuItem(self, -1, 'Share file'))
         self.Append(wx.MenuItem(self, -1, 'Copy file'))
-        self.Append(wx.MenuItem(self, -1, 'Open file'))
+
+        view_text = "Edit file"
+        if self.name.split('.')[-1] in image_types:
+            view_text = "Open file"
+
+        self.Append(wx.MenuItem(self, -1, view_text))
 
         self.AppendSeparator()
 
@@ -727,7 +741,7 @@ class PopMenu(wx.Menu):
             self.parent.share_file_request(self.name)
         elif item == "Copy file":
             self.parent.copied_file = f"{self.parent.curPath}/{self.name}".lstrip('/')
-        elif item == "Open file":
+        elif item == "Edit file" or item == "Open file":
             self.parent.open_file_request(self.name)
 
 
