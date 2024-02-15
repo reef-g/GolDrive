@@ -5,8 +5,6 @@ import queue
 import encryption
 import Settings
 import clientProtocol
-import wx
-from pubsub import pub
 
 
 class ClientComm:
@@ -93,13 +91,10 @@ class ClientComm:
         try:
             while len(data) < file_len:
                 slices = file_len - len(data)
-
                 if slices > 1024:
                     data.extend(self.socket.recv(1024))
-                    wx.CallAfter(pub.sendMessage, "changeStatus", name=path, percent=int((len(data) / file_len)*100))
                 else:
                     data.extend(self.socket.recv(slices))
-                    wx.CallAfter(pub.sendMessage, "changeStatus", name=path, percent=int((len(data) / file_len)*100))
                     break
 
         except Exception as e:
@@ -131,6 +126,9 @@ class ClientComm:
                 self.socket.send(cryptFile)
             except Exception as e:
                 print(str(e))
+
+
+
 
 
 if __name__ == "__main__":

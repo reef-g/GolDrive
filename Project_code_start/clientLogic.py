@@ -8,8 +8,6 @@ from Graphics import graphics
 from pubsub import pub
 import wx
 import secrets
-import shutil
-import monitorFile
 
 
 def main_loop():
@@ -43,21 +41,20 @@ def _handle_messages(msg_q):
 
 def _handle_files_port(files_port):
     files_q = queue.Queue()
-    files_comm = clientComm.ClientComm(Settings.SERVERIP, int(files_port), files_q, 10)
-    threading.Thread(target=_handle_files, args=(files_comm, files_q,)).start()
+    files_comm = clientComm.ClientComm(Settings.SERVERIP, int(files_port), files_q, 6)
+    threading.Thread(target=_handle_files, args=(files_q,)).start()
     wx.CallAfter(pub.sendMessage, "update_file_comm", filecomm=files_comm)
 
     # app.filesSocket = files_socket
 
 
-def _handle_files(files_comm, files_q):
+def _handle_files(files_q):
     recv_commands = {"11": _handle_download_file, "12": _handle_upload_file, "20": _handle_open_file}
 
     while True:
         data = files_q.get()
         if data[0] == "11" or data[0] == "20":
             protocol_num, *params = data
-            params.insert(0, files_comm)
         else:
             protocol_num, params = clientProtocol.unpack_message(data)
 
@@ -92,7 +89,7 @@ def _handle_rename_file(status, new_name):
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't rename file.", title="Error")
 
 
-def _handle_download_file(file_comm, status, path, selected_path, data):
+def _handle_download_file(status, path, selected_path, data):
     file_name = path.split('/')[-1]
 
     if status == "0":
@@ -110,53 +107,25 @@ def _handle_download_file(file_comm, status, path, selected_path, data):
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Download failed.", title="Error")
 
 
-def _handle_open_file(file_comm, status, server_path, data):
-    file_name = server_path.split('/')[-1]
-    server_path = '/'.join(server_path.split('/')[:-1])
-
+def _handle_open_file(status, Type, data):
     if status == "0":
         # creating random name
         ascii_values = list(range(65, 91)) + list(range(97, 123)) + list(range(48, 58))
-
-        cwd = os.getcwd().replace('\\', '/')
-        while True:
+        random_name = ''.join(chr(secrets.choice(ascii_values)) for _ in range(16))
+        path = os.getcwd() + "\\" + random_name + f".{Type}"
+        while os.path.isfile(path):
             random_name = ''.join(chr(secrets.choice(ascii_values)) for _ in range(16))
-            path = f"{cwd}/{random_name}"
-            if not os.path.isdir(path):
-                break
+            path = os.getcwd() + "\\" + random_name + f".{Type}"
 
         try:
-            os.mkdir(path)
-            file_path = f"{path}/{file_name}"
-            with open(file_path, 'wb' if type(data) == bytes else 'w') as f:
+            with open(path, 'wb' if type(data) == bytes else 'w') as f:
                 f.write(data)
 
+            # open file and delete it
+            os.startfile(path)
         except Exception as e:
             wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't open file.", title="Error")
             print(str(e))
-        else:
-            change_flag = False
-            monitor_q = queue.Queue()
-
-            is_alive_thread = threading.Thread(target=monitorFile.wait_until, args=(file_path, monitor_q))
-            is_alive_thread.start()
-            monitor_thread = threading.Thread(target=monitorFile.monitor, args=(path, monitor_q))
-            monitor_thread.start()
-
-            while True:
-                data = monitor_q.get()
-                if data == "Finished":
-                    break
-                elif data == "Changed":
-                    change_flag = True
-
-            if change_flag:
-                file_comm.send_file(file_path, server_path)
-
-            try:
-                shutil.rmtree(path)
-            except Exception as e:
-                print(str(e))
 
     else:
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't open file.", title="Error")

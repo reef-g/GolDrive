@@ -83,7 +83,7 @@ def _handle_login(main_server, db, client_ip, username, password):
         main_server.usersByIp[username] = client_ip
         port_to_give = portsHandler.PortsHandler.get_next_port()
         files_q = queue.Queue()
-        files_server = serverComm.ServerComm(port_to_give, files_q, 10)
+        files_server = serverComm.ServerComm(port_to_give, files_q, 6)
         threading.Thread(target=handle_files, args=(files_server, files_q,)).start()
         port_msg = serverProtocol.pack_upload_port(port_to_give)
         main_server.send(client_ip, port_msg)
@@ -146,14 +146,14 @@ def _handle_download_file(main_server, client_ip, path, selected_path):
     main_server.send_file(client_ip, params)
 
 
-def _handle_open_file(main_server, client_ip, path):
+def _handle_open_file(main_server, client_ip, Type, path):
     """
     :param main_server: the server object
     :param client_ip: the clients ip
     :param path: the path of the file to download
     :return: returns the data of the file
     """
-    params = ("20", path)
+    params = ("20", Type, path)
     main_server.send_file(client_ip, params)
 
 
