@@ -157,7 +157,7 @@ def pack_change_username_request(username):
     :param username: username to change to
     :return: message built py protocol
     """
-    return f"04{str(len(username)).zfill(2)}{username}"
+    return f"04{str(len(str(username))).zfill(2)}{username}"
 
 
 def pack_change_password_request(password):
@@ -165,15 +165,15 @@ def pack_change_password_request(password):
     :param password: password
     :return: message built py protocol
     """
-    return f"06{str(len(password)).zfill(2)}{password}"
+    return f"06{str(len(str(password))).zfill(2)}{password}"
 
 
-def pack_change_email_request(email):
+def pack_change_email_request(username, email):
     """
     :param email: email
     :return: message built py protocol
     """
-    return f"05{str(len(email)).zfill(2)}{email}"
+    return f"05{str(len(str(username))).zfill(2)}{username}{str(len(str(email))).zfill(2)}{email}"
 
 
 def pack_move_file_folder_request(src, dst):
@@ -184,8 +184,12 @@ def pack_paste_file_request(src, dst):
     return f"19{str(len(str(src))).zfill(2)}{src}{str(len(str(dst))).zfill(2)}{dst}"
 
 
-def pack_open_file_request(path, Type):
-    return f"20{str(len(str(path))).zfill(2)}{path}{str(len(str(Type))).zfill(2)}{Type}"
+def pack_open_file_request(path):
+    return f"20{str(len(str(path))).zfill(2)}{path}"
+
+
+def pack_get_details_request(username):
+    return f"21{str(len(str(username))).zfill(2)}{username}"
 
 
 if __name__ == '__main__':
@@ -194,3 +198,5 @@ if __name__ == '__main__':
     print(pack_register_request("reef", "123", "reefg19@gmail.com"))
     print(unpack_message("0104reef0312317reefg19@gmail.com"))
     print(pack_login_request("reef", "123"))
+
+    print(pack_get_details_request("reef"))

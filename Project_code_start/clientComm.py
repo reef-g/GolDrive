@@ -3,8 +3,10 @@ import threading
 import sys
 import queue
 import encryption
-import Settings
+from settings import Settings
 import clientProtocol
+import wx
+from pubsub import pub
 
 
 class ClientComm:
@@ -81,7 +83,7 @@ class ClientComm:
         path, selected_path, Type = "", "", ""
         if opcode == "11":
             file_len, path, selected_path = params[1:]
-            path = '/'.join(path.split('/')[1::]).lstrip('/')
+            wx.CallAfter(pub.sendMessage, "startBar", name=path.split('/')[-1])
         else:
             file_len, Type = params[1:]
 
@@ -91,7 +93,11 @@ class ClientComm:
         try:
             while len(data) < file_len:
                 slices = file_len - len(data)
+
                 if slices > 1024:
+                    if opcode == "11":
+                        wx.CallAfter(pub.sendMessage, "changeProgress",
+                                     percent=int((len(data) / file_len) * 100))
                     data.extend(self.socket.recv(1024))
                 else:
                     data.extend(self.socket.recv(slices))
@@ -107,6 +113,8 @@ class ClientComm:
             self._close()
         else:
             if opcode == "11":
+                wx.CallAfter(pub.sendMessage, "changeProgress",
+                             percent=int((len(data) / file_len) * 100))
                 self.recvQ.put(("11", '0', path, selected_path, self.enc_obj.dec_msg(data)))
             else:
                 self.recvQ.put(("20", '0', Type, self.enc_obj.dec_msg(data)))
@@ -126,9 +134,6 @@ class ClientComm:
                 self.socket.send(cryptFile)
             except Exception as e:
                 print(str(e))
-
-
-
 
 
 if __name__ == "__main__":

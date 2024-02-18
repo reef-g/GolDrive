@@ -4,11 +4,13 @@ import threading
 import portsHandler
 import serverComm
 import serverProtocol
-import Settings
+from settings import Settings
 import DB
 import encryption
 import sFileHandler
 import shutil
+import smtplib
+import random
 
 
 def main_loop():
@@ -28,14 +30,18 @@ def _handle_messages(main_server, msg_q):
     :return: takes the message out the message queue and runs the according function
     """
     my_db = DB.DB()
+    ip_by_username = {}
 
-    recv_commands = {"01": _handle_registration, "02": _handle_login, "08": _handle_rename_file,
-                     "09": _handle_share_file, "10": _handle_delete_file, "13": _handle_create_dir,
-                     "18": _handle_move_file, "19": _handle_paste_file}
+    recv_commands = {"01": _handle_registration, "02": _handle_login, "05": _handle_change_email,
+                     "08": _handle_rename_file, "09": _handle_share_file, "10": _handle_delete_file,
+                     "13": _handle_create_dir, "18": _handle_move_file, "19": _handle_paste_file,
+                     "21": _handle_get_details}
 
     while True:
         ip, data = msg_q.get()
         protocol_num, params = serverProtocol.unpack_message(data)
+        if protocol_num == "02" or protocol_num == "09":
+            params.insert(0, ip_by_username)
 
         if protocol_num in recv_commands.keys():
             recv_commands[protocol_num](main_server, my_db, ip, *params)
@@ -63,7 +69,7 @@ def _handle_registration(main_server, db, client_ip, username, password, mail):
             os.mkdir(f"{Settings.USER_FILES_PATH}/{username}/@#$SHAREDFILES$#@")
 
 
-def _handle_login(main_server, db, client_ip, username, password):
+def _handle_login(main_server, db, client_ip, ip_by_users, username, password):
     """
     :param main_server: the server object
     :param db: the database
@@ -80,10 +86,10 @@ def _handle_login(main_server, db, client_ip, username, password):
     main_server.send(client_ip, msg)
 
     if status == 0:
-        main_server.usersByIp[username] = client_ip
+        ip_by_users[username] = client_ip
         port_to_give = portsHandler.PortsHandler.get_next_port()
         files_q = queue.Queue()
-        files_server = serverComm.ServerComm(port_to_give, files_q, 6)
+        files_server = serverComm.ServerComm(port_to_give, files_q, 10)
         threading.Thread(target=handle_files, args=(files_server, files_q,)).start()
         port_msg = serverProtocol.pack_upload_port(port_to_give)
         main_server.send(client_ip, port_msg)
@@ -146,14 +152,14 @@ def _handle_download_file(main_server, client_ip, path, selected_path):
     main_server.send_file(client_ip, params)
 
 
-def _handle_open_file(main_server, client_ip, Type, path):
+def _handle_open_file(main_server, client_ip, path):
     """
     :param main_server: the server object
     :param client_ip: the clients ip
     :param path: the path of the file to download
     :return: returns the data of the file
     """
-    params = ("20", Type, path)
+    params = ("20", path)
     main_server.send_file(client_ip, params)
 
 
@@ -188,7 +194,7 @@ def _handle_create_dir(main_server, db, client_ip, path):
     main_server.send(client_ip, msg)
 
 
-def _handle_share_file(main_server, db, client_ip, path, username):
+def _handle_share_file(main_server, db, client_ip, ip_by_users, path, username):
     status = 0
     user_who_shared = path.split('/')[0]
     path_to_add = f"{Settings.USER_FILES_PATH}/{username}/@#$SHAREDFILES$#@/{user_who_shared}"
@@ -213,9 +219,9 @@ def _handle_share_file(main_server, db, client_ip, path, username):
     msg = serverProtocol.pack_share_response(status)
     main_server.send(client_ip, msg)
 
-    if username in main_server.usersByIp:
+    if username in ip_by_users:
         msg = serverProtocol.pack_add_shared_file(path)
-        main_server.send(main_server.usersByIp[username], msg)
+        main_server.send(ip_by_users[username], msg)
 
 
 def _handle_move_file(main_server, db, client_ip, src, dst):
@@ -242,9 +248,55 @@ def _handle_paste_file(main_server, db, client_ip, src, dst):
     main_server.send(client_ip, msg)
 
 
+def _handle_get_details(main_server, db, client_ip, username):
+    email = db.get_email(username)
+
+    msg = serverProtocol.pack_get_details_response(email)
+    main_server.send(client_ip, msg)
 
 
+def _handle_change_email(main_server, db, client_ip, username, email):
+    # Set your email and password
+    sender_email = 'cybercheck818@gmail.com'
+    sender_password = '!reef7333'
 
+    # Set the recipient email address
+    recipient_email = email
+
+    # Create the email content
+    subject = 'Verify email'
+    num_to_verify = random.randint(100000, 1000000)
+    body = f'The number to verify is: {num_to_verify}'
+    email_message = f"Subject: {subject}\n\n{body}"
+
+    # Set up the SMTP server
+    smtp_server = 'smtp.gmail.com'
+    smtp_port = 587
+
+    # Establish a connection to the SMTP server
+    server = smtplib.SMTP(smtp_server, smtp_port)
+    server.starttls()
+
+    # Login to your email account
+    server.login(sender_email, sender_password)
+
+    # Send the email
+    try:
+        server.sendmail(sender_email, recipient_email, email_message)
+    except Exception as e:
+        print(str(e))
+        status = 1
+
+    # Quit the SMTP server
+    server.quit()
+
+    if '@' in email:
+        status = db.change_email(username, email)
+    else:
+        status = 1
+
+    msg = serverProtocol.pack_change_email_response(status, email)
+    main_server.send(client_ip, msg)
 
 
 

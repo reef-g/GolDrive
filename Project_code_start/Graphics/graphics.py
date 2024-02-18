@@ -1,10 +1,10 @@
 import os
-import Settings
+from settings import Settings
 import wx
 import wx.lib.scrolledpanel
 from pubsub import pub
 import clientProtocol
-import secrets
+import time
 
 
 class MyFrame(wx.Frame):
@@ -13,10 +13,6 @@ class MyFrame(wx.Frame):
         self.comm = comm
         self.Maximize()
 
-        # create status bar
-        # self.CreateStatusBar(1)
-        # self.SetStatusText("GolDrive by Reef Gold - 2024")
-        # create main panel - to put on the others panels
         self.main_panel = MainPanel(self, self.comm)
         box = wx.BoxSizer(wx.VERTICAL)
         box.Add(self.main_panel, 1, wx.EXPAND)
@@ -32,7 +28,8 @@ class MainPanel(wx.Panel):
         self.frame = parent
         self.comm = comm
         self.SetBackgroundColour(wx.LIGHT_GREY)
-        self.username = ""
+        self.username = None
+        self.email = None
         v_box = wx.BoxSizer()
         # create object for each panel
         self.login = LoginPanel(self, self.frame, self.comm)
@@ -42,6 +39,7 @@ class MainPanel(wx.Panel):
         v_box.Add(self.login)
         v_box.Add(self.register)
         v_box.Add(self.files)
+
         # The first panel to show
         self.login.Show()
         self.SetSizer(v_box)
@@ -97,6 +95,8 @@ class LoginPanel(wx.Panel):
 
     def login_ok(self):
         self.parent.files.title.SetLabel(self.parent.username.upper())
+        msg = clientProtocol.pack_get_details_request(self.parent.username)
+        self.comm.send(msg)
         self.parent.change_screen(self, self.parent.files)
 
     def on_ok(self, event):
@@ -184,6 +184,7 @@ class FilesPanel(wx.Panel):
             f"{Settings.USER_IMAGES_PATH}/Shared.png", wx.BITMAP_TYPE_ANY))
 
         self.shared_files_img.Bind(wx.EVT_LEFT_DOWN, self.show_shared_files)
+        self.settings_img.Bind(wx.EVT_LEFT_DOWN, self.show_settings)
 
         self.icons_sizer.AddSpacer(10)
         self.icons_sizer.Add(self.settings_img)
@@ -224,8 +225,10 @@ class FilesPanel(wx.Panel):
         self.buttons_sizer.Add(self.pasteButton)
 
         self.sizer.AddMany([(self.title_sizer, 0, wx.CENTER),
-                            (self.icons_and_files_sizer, 0, wx.CENTER),
-                            (self.buttons_sizer, 0, wx.CENTER)])
+                            (self.icons_and_files_sizer, 0, wx.CENTER)])
+
+        self.sizer.AddSpacer(15)
+        self.sizer.Add(self.buttons_sizer, 0, wx.CENTER)
 
         self.SetSizer(self.sizer)
 
@@ -237,12 +240,18 @@ class FilesPanel(wx.Panel):
         pub.subscribe(self._add_shared_file, "addFile")
         pub.subscribe(self._move_file, "moveFile")
         pub.subscribe(self._handle_paste_file, "pasteFile")
-        pub.subscribe(self._files_comm_update, "update_file_comm")
+        pub.subscribe(self._show_progress_bar, "startBar")
+        pub.subscribe(self._change_progress_bar, "changeProgress")
+        pub.subscribe(self._files_comm_update, "updateFileComm")
+        pub.subscribe(self._get_details, "detailsOk")
 
         self.Layout()
         self.Hide()
         self.drop_target = MyDropTarget(self)
         self.SetDropTarget(self.drop_target)
+
+    def _get_details(self, email):
+        self.parent.email = email
 
     def show_menu(self, event):
         flag = True
@@ -506,13 +515,17 @@ class FilesPanel(wx.Panel):
 
     def _upload_object(self, path):
         name_to_add = path.split('/')[-1]
-
+        text_to_show = f"Uploaded {name_to_add} successfully."
         for branch in self.branches:
             if branch[0] == self.curPath:
-                branch[2].append(name_to_add)
-                branch[2].sort()
+                if name_to_add not in branch[2]:
+                    branch[2].append(name_to_add)
+                    branch[2].sort()
+                else:
+                    text_to_show = f"Updated {name_to_add} successfully."
                 break
         self.show_files(self.curPath)
+        self.parent.show_pop_up(text_to_show, "Success")
 
     def create_dir_request(self, event):
         dlg = wx.TextEntryDialog(self, f'Please enter the name for the directory:', 'Create new directory', '')
@@ -592,6 +605,7 @@ class FilesPanel(wx.Panel):
                 branch[2].append(self.file_name)
 
         self.show_files(self.curPath)
+        self.parent.show_pop_up("Moved file successfully", "Success")
 
     def paste_file_request(self, event):
         if self.copied_file:
@@ -605,23 +619,128 @@ class FilesPanel(wx.Panel):
 
     def _handle_paste_file(self):
         file_name = self.copied_file.split('/')[-1]
-
+        text_to_show = "Pasted file successfully."
         for branch in self.branches:
             if branch[0] == self.curPath:
-                branch[2].append(file_name)
-                branch[2].sort()
+                if file_name not in branch[2]:
+                    branch[2].append(file_name)
+                    branch[2].sort()
+                else:
+                    text_to_show = "Updated file successfully."
                 break
 
         self.show_files(self.curPath)
+        self.parent.show_pop_up(text_to_show, "Success")
 
     def open_file_request(self, name):
         try:
             msg2send = clientProtocol.pack_open_file_request(
-                f"{self.parent.username}/{self.curPath}/{name}".replace("//", ''), name.split('.')[-1]
+                f"{self.parent.username}/{self.curPath}/{name}".replace("//", '/')
             )
             self.files_comm.send(msg2send)
         except Exception as e:
             print(str(e))
+
+    def _show_progress_bar(self, name):
+        self.progressDialog = wx.ProgressDialog(title=name, message="Download at 0%", maximum=100,
+                                                style=wx.PD_AUTO_HIDE | wx.PD_APP_MODAL)
+
+    def _change_progress_bar(self, percent):
+        self.progressDialog.Update(percent, f"Download at {percent}%")
+        # wasting time to show update of percent
+        time.sleep(0.0001)
+
+        if percent == 100:
+            self.progressDialog.Destroy()
+
+    def show_settings(self, event):
+        settings = UserPanel(self.parent, self.frame, self.comm, self.parent.username, self.parent.email)
+
+        self.parent.change_screen(self, settings)
+
+
+class UserPanel(wx.Panel):
+    def __init__(self, parent, frame, comm, name, email):
+        wx.Panel.__init__(self, parent, pos=wx.DefaultPosition, size=(1920, 1080), style=wx.SIMPLE_BORDER)
+        self.frame = frame
+        self.comm = comm
+        self.parent = parent
+        self.name = name
+        self.email = email
+        self.SetBackgroundColour(wx.LIGHT_GREY)
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.AddSpacer(250)
+
+        self.titleSizer = wx.BoxSizer(wx.VERTICAL)
+        self.usernameTitleSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.emailTitleSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.usernameTitle = wx.StaticText(self, -1, label=f"Username: {self.parent.username}", pos=(0, 0))
+        self.emailTitle = wx.StaticText(self, -1, label=f"Email: {self.parent.email}", pos=(0, 0))
+        titlefont = wx.Font(45, wx.DECORATIVE, wx.NORMAL, wx.NORMAL)
+        self.usernameTitle.SetFont(titlefont)
+        self.emailTitle.SetFont(titlefont)
+
+        # adding padding to the text so it doesn't start from the edge
+        self.usernameTitleSizer.AddSpacer(120)
+        self.usernameTitleSizer.Add(self.usernameTitle)
+
+        # adding padding to the text so it doesn't start from the edge
+        self.emailTitleSizer.AddSpacer(120)
+        self.emailTitleSizer.Add(self.emailTitle)
+
+        self.titleSizer.Add(self.usernameTitleSizer)
+        self.titleSizer.AddSpacer(200)
+        self.titleSizer.Add(self.emailTitleSizer)
+
+        self.sizer.Add(self.titleSizer)
+
+        self.loginButton = wx.Button(self, label="BACK TO LOGIN")
+        self.filesButton = wx.Button(self, label="BACK TO FILES")
+        self.changeEmailButton = wx.Button(self, label="CHANGE EMAIL")
+
+        self.loginButton.Bind(wx.EVT_BUTTON, self.login_control)
+        self.filesButton.Bind(wx.EVT_BUTTON, self.files_control)
+        self.changeEmailButton.Bind(wx.EVT_BUTTON, self.change_email_request)
+
+        self.buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.buttons_sizer.Add(self.loginButton)
+        self.buttons_sizer.AddSpacer(20)
+        self.buttons_sizer.Add(self.filesButton)
+        self.buttons_sizer.AddSpacer(20)
+        self.buttons_sizer.Add(self.changeEmailButton)
+
+        self.sizer.AddSpacer(310)
+        self.sizer.Add(self.buttons_sizer, 0, wx.CENTER)
+
+        self.SetSizer(self.sizer)
+        self.Layout()
+
+        pub.subscribe(self._change_email, "changeEmailOk")
+
+        self.Hide()
+
+    def login_control(self, event):
+        self.parent.change_screen(self, self.parent.login)
+
+    def files_control(self, event):
+        self.parent.change_screen(self, self.parent.files)
+
+    def change_email_request(self, event):
+        dlg = wx.TextEntryDialog(self, f'What new email to change to?', 'Confirmation', '')
+        result = dlg.ShowModal()
+
+        if result == wx.ID_OK:
+            msg = clientProtocol.pack_change_email_request(self.parent.username, dlg.GetValue())
+            self.comm.send(msg)
+
+        dlg.Destroy()
+
+    def _change_email(self, email):
+        self.parent.email = email
+        self.emailTitle.SetLabel(f"Email: {self.parent.email}")
+        self.Layout()
 
 
 class RegistrationPanel(wx.Panel):
@@ -685,6 +804,9 @@ class PopMenu(wx.Menu):
     def __init__(self, parent, name):
         super(PopMenu, self).__init__()
 
+        image_types = ["apng", "avif", "gif", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp", "bmp", "ico",
+                       "cur", "tif", "tiff"]
+
         self.parent = parent
         self.name = name
         self.pos = wx.GetMousePosition()
@@ -701,7 +823,12 @@ class PopMenu(wx.Menu):
         self.Append(wx.MenuItem(self, -1, 'Download file'))
         self.Append(wx.MenuItem(self, -1, 'Share file'))
         self.Append(wx.MenuItem(self, -1, 'Copy file'))
-        self.Append(wx.MenuItem(self, -1, 'Open file'))
+
+        view_text = "Edit file"
+        if self.name.split('.')[-1] in image_types:
+            view_text = "Open file"
+
+        self.Append(wx.MenuItem(self, -1, view_text))
 
         self.AppendSeparator()
 
@@ -725,7 +852,7 @@ class PopMenu(wx.Menu):
             self.parent.share_file_request(self.name)
         elif item == "Copy file":
             self.parent.copied_file = f"{self.parent.curPath}/{self.name}".lstrip('/')
-        elif item == "Open file":
+        elif item == "Edit file" or item == "Open file":
             self.parent.open_file_request(self.name)
 
 

@@ -1,6 +1,5 @@
 import os
-
-import Settings
+from settings import Settings
 
 
 def unpack_message(msg):
@@ -8,7 +7,6 @@ def unpack_message(msg):
     :param msg: message to unpack
     :return: tuple with opcode and variables
     """
-
     opcode = msg[:2]
     data_from_msg = []
     msg = msg[2:]
@@ -176,12 +174,13 @@ def pack_change_password_response(response):
     return f"06{str(len(str(response))).zfill(2)}{response}"
 
 
-def pack_change_email_response(response):
+def pack_change_email_response(response, email):
     """
     :param response: response to change email
+    :param email: email to change to
     :return: opcode + length + response
     """
-    return f"05{str(len(str(response))).zfill(2)}{response}"
+    return f"05{str(len(str(response))).zfill(2)}{response}{str(len(str(email))).zfill(2)}{email}"
 
 
 def pack_verify_email_message():
@@ -209,9 +208,13 @@ def pack_paste_file_response(status):
     return f"19{str(len(str(status))).zfill(2)}{status}"
 
 
-def pack_open_file_response(status, Type, datalen):
+def pack_open_file_response(status, file_path, datalen):
     return f"20{str(len(str(status))).zfill(2)}{status}{str(len(str(datalen))).zfill(2)}{datalen}" \
-           f"{str(len(str(Type))).zfill(2)}{Type}"
+           f"{str(len(str(file_path))).zfill(2)}{file_path}"
+
+
+def pack_get_details_response(email):
+    return f"21{str(len(email)).zfill(2)}{email}"
 
 
 if __name__ == '__main__':

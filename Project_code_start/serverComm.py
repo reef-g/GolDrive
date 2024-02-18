@@ -2,7 +2,7 @@ import socket
 import select
 import threading
 import queue
-import Settings
+from settings import Settings
 import serverProtocol
 import encryption
 import sFileHandler
@@ -18,7 +18,6 @@ class ServerComm:
         self.recv_q = recv_q
         self.serverSocket = socket.socket()
         self.openClients = {}  # [socket]:[ip, key]
-        self.usersByIp = {}
         self.isRunning = False
         self.msgLenBytes = msg_len_bytes
 
@@ -159,12 +158,11 @@ class ServerComm:
             self.recv_q.put((ip, ("12", file_path, decData)))
 
     def send_file(self, client_ip, params):
-        path, selected_path, Type = "", "", ""
+        path, selected_path = "", ""
         if params[0] == "11":
             path = params[1]
             selected_path = params[2]
         else:
-            Type = params[2]
             path = params[1]
 
         client_socket = self._find_socket_by_ip(client_ip)
@@ -179,7 +177,7 @@ class ServerComm:
                 if params[0] == "11":
                     msg = serverProtocol.pack_file_download_response(status, 0, path, selected_path)
                 else:
-                    msg = serverProtocol.pack_open_file_response(status, Type, 0)
+                    msg = serverProtocol.pack_open_file_response(status, path, 0)
                 self.send(client_ip, msg)
 
             else:
@@ -187,7 +185,7 @@ class ServerComm:
                 if params[0] == "11":
                     msg = serverProtocol.pack_file_download_response(status, len(cryptFile), path, selected_path)
                 else:
-                    msg = serverProtocol.pack_open_file_response(status, Type, len(cryptFile))
+                    msg = serverProtocol.pack_open_file_response(status, path, len(cryptFile))
 
                 self.send(client_ip, msg)
                 try:
