@@ -92,14 +92,6 @@ def pack_verify_check_response(response):
     return f"15{str(len(str(response))).zfill(2)}{response}"
 
 
-def pack_forgot_password_response(response):
-    """
-    :param response: response to forgot password
-    :return: opcode + length + response
-    """
-    return f"07{str(len(str(response))).zfill(2)}{response}"
-
-
 def pack_file_download_response(response, datalen, path, selected_path):
     # download file response
     return f"11{str(len(str(response))).zfill(2)}{response}{str(len(str(datalen))).zfill(2)}{datalen}" \

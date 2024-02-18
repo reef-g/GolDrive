@@ -643,9 +643,12 @@ class FilesPanel(wx.Panel):
 
     def _show_progress_bar(self, name):
         self.progressDialog = wx.ProgressDialog(title=name, message="Download at 0%", maximum=100,
-                                                style=wx.PD_AUTO_HIDE | wx.PD_APP_MODAL)
+                                                style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE)
 
     def _change_progress_bar(self, percent):
+        while not self.progressDialog:
+            pass
+
         self.progressDialog.Update(percent, f"Download at {percent}%")
         # wasting time to show update of percent
         time.sleep(0.0001)
@@ -728,20 +731,38 @@ class UserPanel(wx.Panel):
         self.parent.change_screen(self, self.parent.files)
 
     def change_email_request(self, event):
-        dlg = wx.TextEntryDialog(self, f'What new email to change to?', 'Confirmation', '')
-        result = dlg.ShowModal()
+        email_dlg = wx.TextEntryDialog(self, f'What new email to change to?', 'Confirmation', '')
+        result = email_dlg.ShowModal()
 
         if result == wx.ID_OK:
-            msg = clientProtocol.pack_change_email_request(self.parent.username, dlg.GetValue())
-            self.comm.send(msg)
+            email = email_dlg.GetValue()
+            email_dlg.Destroy()
 
-        dlg.Destroy()
+            split_email = email.split('@')
+            if '@' in email and len(split_email) == 2 and split_email[0] and split_email[1]:
+                msg = clientProtocol.pack_send_verify_request(email)
+                self.comm.send(msg)
+
+                verify_dlg = wx.TextEntryDialog(self, f'Which 6-digit code did you receive in your mail?', 'Verify', '')
+                result = verify_dlg.ShowModal()
+
+                if result == wx.ID_OK:
+                    msg = clientProtocol.pack_change_email_request(self.parent.username, email, verify_dlg.GetValue())
+                    self.comm.send(msg)
+
+                verify_dlg.Destroy()
+            else:
+                self.parent.show_pop_up("Please enter a valid email address.", "Error")
+
+        else:
+            email_dlg.Destroy()
 
     def _change_email(self, email):
         self.parent.email = email
-        self.emailTitle.SetLabel(f"Email: {self.parent.email}")
+        self.emailTitle.SetLabel(f"Email: {email}")
         self.Layout()
 
+        self.parent.show_pop_up(f"Changed email to {email} successfully.", "Success")
 
 class RegistrationPanel(wx.Panel):
     def __init__(self, parent, frame, comm):

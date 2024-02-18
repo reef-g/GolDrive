@@ -11,6 +11,8 @@ import sFileHandler
 import shutil
 import smtplib
 import random
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 
 def main_loop():
@@ -31,17 +33,20 @@ def _handle_messages(main_server, msg_q):
     """
     my_db = DB.DB()
     ip_by_username = {}
+    code_dic = {}
 
     recv_commands = {"01": _handle_registration, "02": _handle_login, "05": _handle_change_email,
-                     "08": _handle_rename_file, "09": _handle_share_file, "10": _handle_delete_file,
-                     "13": _handle_create_dir, "18": _handle_move_file, "19": _handle_paste_file,
-                     "21": _handle_get_details}
+                     "07": _send_email, "08": _handle_rename_file, "09": _handle_share_file,
+                     "10": _handle_delete_file, "13": _handle_create_dir, "18": _handle_move_file,
+                     "19": _handle_paste_file, "21": _handle_get_details}
 
     while True:
         ip, data = msg_q.get()
         protocol_num, params = serverProtocol.unpack_message(data)
         if protocol_num == "02" or protocol_num == "09":
             params.insert(0, ip_by_username)
+        elif protocol_num == "05" or protocol_num == "07":
+            params.insert(0, code_dic)
 
         if protocol_num in recv_commands.keys():
             recv_commands[protocol_num](main_server, my_db, ip, *params)
@@ -255,48 +260,54 @@ def _handle_get_details(main_server, db, client_ip, username):
     main_server.send(client_ip, msg)
 
 
-def _handle_change_email(main_server, db, client_ip, username, email):
-    # Set your email and password
-    sender_email = 'cybercheck818@gmail.com'
-    sender_password = '!reef7333'
+def _send_email(main_server, my_db, client_ip, code_dic, email):
+    # Email credentials
+    sender_email = "goldriveauth@gmail.com"
+    receiver_email = email
+    password = "pukb pfll qplp gukh"
 
-    # Set the recipient email address
-    recipient_email = email
+    # Create the MIME object
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = receiver_email
+    message["Subject"] = "Verify email"
 
-    # Create the email content
-    subject = 'Verify email'
-    num_to_verify = random.randint(100000, 1000000)
-    body = f'The number to verify is: {num_to_verify}'
-    email_message = f"Subject: {subject}\n\n{body}"
+    verify_code = random.randint(100000, 999999)
+    code_dic[email] = str(verify_code)
+    # Add the email body
+    body = f"The code to verify is {verify_code}."
+    message.attach(MIMEText(body, "plain"))
 
-    # Set up the SMTP server
-    smtp_server = 'smtp.gmail.com'
-    smtp_port = 587
-
-    # Establish a connection to the SMTP server
-    server = smtplib.SMTP(smtp_server, smtp_port)
-    server.starttls()
-
-    # Login to your email account
-    server.login(sender_email, sender_password)
-
-    # Send the email
+    # Connect to the SMTP server
     try:
-        server.sendmail(sender_email, recipient_email, email_message)
-    except Exception as e:
-        print(str(e))
-        status = 1
+        smtp_server = smtplib.SMTP("smtp.gmail.com", 587)
+        smtp_server.starttls()
+        smtp_server.login(sender_email, password)
 
-    # Quit the SMTP server
-    server.quit()
+        # Send the email
+        smtp_server.sendmail(sender_email, receiver_email, message.as_string())
+        print("Email sent successfully!")
 
-    if '@' in email:
-        status = db.change_email(username, email)
+    except smtplib.SMTPException as e:
+        print(f"Error: {e}")
+
     else:
-        status = 1
+        # Disconnect from the SMTP server
+        smtp_server.quit()
+
+
+def _handle_change_email(main_server, db, client_ip, code_dic, username, email, code):
+    status = 1
+    if email in code_dic:
+        if code_dic[email] == code:
+            status = db.change_email(username, email)
 
     msg = serverProtocol.pack_change_email_response(status, email)
     main_server.send(client_ip, msg)
+
+
+
+
 
 
 

@@ -84,15 +84,16 @@ def pack_login_request(username, password):
     return f"02{str(len(username)).zfill(2)}{username}{str(len(password)).zfill(2)}{password}"
 
 
-def pack_verify_check_request(code):
+def pack_verify_check_request(email, code):
     """
+    :param email: email to verify
     :param code: code sent to email
     :return: message built py protocol
     """
-    return f"15{str(len(code)).zfill(2)}{code}"
+    return f"15{str(len(email)).zfill(2)}{email}{str(len(str(code))).zfill(2)}{code}"
 
 
-def pack_forgot_password_request(email):
+def pack_send_verify_request(email):
     """
     :param email: email
     :return: message built py protocol
@@ -168,12 +169,15 @@ def pack_change_password_request(password):
     return f"06{str(len(str(password))).zfill(2)}{password}"
 
 
-def pack_change_email_request(username, email):
+def pack_change_email_request(username, email, code):
     """
+    :param username: username of user
     :param email: email
+    :param code: the code sent to the user
     :return: message built py protocol
     """
-    return f"05{str(len(str(username))).zfill(2)}{username}{str(len(str(email))).zfill(2)}{email}"
+    return (f"05{str(len(str(username))).zfill(2)}{username}{str(len(str(email))).zfill(2)}{email}"
+            f"{str(len(str(code))).zfill(2)}{code}")
 
 
 def pack_move_file_folder_request(src, dst):
