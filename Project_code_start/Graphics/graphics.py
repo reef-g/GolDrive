@@ -69,24 +69,57 @@ class LoginPanel(wx.Panel):
         self.parent = parent
         self.SetBackgroundColour(wx.LIGHT_GREY)
 
-        title = wx.StaticText(self, -1, label="LOG IN", pos=(0, 0))
-        font = wx.Font(25, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False, "High Tower Text")
+        title_font = wx.Font(65, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False, "High Tower Text")
+        text_font = wx.Font(30, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
+        entry_font = wx.Font(20, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.sizer.AddSpacer(290)
+        title = wx.StaticText(self, -1, label="LOG IN")
         title.SetForegroundColour(wx.BLACK)
-        title.SetFont(font)
+        title.SetFont(title_font)
 
-        name_text = wx.StaticText(self, 1, label="Username: ", pos=(10, 40))
-        self.nameField = wx.TextCtrl(self, -1, name="username", pos=(10, 60), size=(150, -1))
+        name_sizer = wx.BoxSizer(wx.VERTICAL)
+        name_text = wx.StaticText(self, 1, label="Username: ")
+        name_text.SetFont(text_font)
+        self.nameField = wx.TextCtrl(self, -1, name="username", size=(475, 40))
+        self.nameField.SetFont(entry_font)
 
-        pass_text = wx.StaticText(self, 1, pos=(10, 90), label="Password: ")
-        self.passField = wx.TextCtrl(self, -1, name="password", pos=(10, 110), size=(150, -1), style=wx.TE_PASSWORD)
+        name_sizer.Add(name_text, 0, wx.Center, 5)
+        name_sizer.Add(self.nameField)
+        name_sizer.AddSpacer(15)
+
+        pass_sizer = wx.BoxSizer(wx.VERTICAL)
+        pass_text = wx.StaticText(self, 1, label="Password: ")
+        pass_text.SetFont(text_font)
+        self.passField = wx.TextCtrl(self, -1, name="password", size=(475, 40), style=wx.TE_PASSWORD)
+        self.passField.SetFont(entry_font)
+
+        pass_sizer.Add(pass_text, 0, wx.Center, 5)
+        pass_sizer.Add(self.passField)
+        pass_sizer.AddSpacer(20)
+
+        button_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        ok_button = wx.Button(self, label="LOG IN", size=(90, 40))
+        self.Bind(wx.EVT_BUTTON, self.on_ok, ok_button)
+
+        register_button = wx.Button(self, label="REGISTER", size=(90, 40))
+        self.Bind(wx.EVT_BUTTON, self.register_control, register_button)
+
+        button_sizer.Add(ok_button, 0, wx.CENTER, 10)
+        button_sizer.AddSpacer(80)
+        button_sizer.Add(register_button, 0, wx.CENTER, 10)
+
+        self.sizer.AddMany([(title, 0, wx.CENTER, 10),
+                            (name_sizer, 0, wx.CENTER, 5),
+                            (pass_sizer, 0, wx.CENTER, 5),
+                            (button_sizer, 0, wx.CENTER, 5)])
 
         pub.subscribe(self.login_ok, "loginOk")
 
-        ok_button = wx.Button(self, label="OK", pos=(15, 140))
-        self.Bind(wx.EVT_BUTTON, self.on_ok, ok_button)
-
-        register_button = wx.Button(self, label="REGISTER", pos=(100, 140))
-        self.Bind(wx.EVT_BUTTON, self.register_control, register_button)
+        self.SetSizer(self.sizer)
+        self.Layout()
 
         self.Hide()
 
@@ -669,6 +702,7 @@ class UserPanel(wx.Panel):
         self.comm = comm
         self.parent = parent
         self.name = name
+
         self.email = email
         self.SetBackgroundColour(wx.LIGHT_GREY)
 
@@ -701,10 +735,12 @@ class UserPanel(wx.Panel):
         self.loginButton = wx.Button(self, label="BACK TO LOGIN")
         self.filesButton = wx.Button(self, label="BACK TO FILES")
         self.changeEmailButton = wx.Button(self, label="CHANGE EMAIL")
+        self.changePasswordButton = wx.Button(self, label="CHANGE PASSWORD")
 
         self.loginButton.Bind(wx.EVT_BUTTON, self.login_control)
         self.filesButton.Bind(wx.EVT_BUTTON, self.files_control)
         self.changeEmailButton.Bind(wx.EVT_BUTTON, self.change_email_request)
+        self.changePasswordButton.Bind(wx.EVT_BUTTON, self.change_password_request)
 
         self.buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -713,6 +749,8 @@ class UserPanel(wx.Panel):
         self.buttons_sizer.Add(self.filesButton)
         self.buttons_sizer.AddSpacer(20)
         self.buttons_sizer.Add(self.changeEmailButton)
+        self.buttons_sizer.AddSpacer(20)
+        self.buttons_sizer.Add(self.changePasswordButton)
 
         self.sizer.AddSpacer(310)
         self.sizer.Add(self.buttons_sizer, 0, wx.CENTER)
@@ -763,6 +801,18 @@ class UserPanel(wx.Panel):
         self.Layout()
 
         self.parent.show_pop_up(f"Changed email to {email} successfully.", "Success")
+
+    def change_password_request(self, event):
+        password_dlg = ChangePasswordDialog(self, "Confirmation")
+        result = password_dlg.ShowModal()
+
+        if result == wx.ID_OK:
+            values = password_dlg.GetValues()
+
+            msg = clientProtocol.pack_change_password_request(self.parent.username, *values)
+            self.comm.send(msg)
+        password_dlg.Destroy()
+
 
 class RegistrationPanel(wx.Panel):
     def __init__(self, parent, frame, comm):
@@ -821,7 +871,6 @@ class RegistrationPanel(wx.Panel):
 
 
 class PopMenu(wx.Menu):
-
     def __init__(self, parent, name):
         super(PopMenu, self).__init__()
 
@@ -878,7 +927,6 @@ class PopMenu(wx.Menu):
 
 
 class MenuFeatures(wx.Menu):
-
     def __init__(self, parent, show_back):
         super(MenuFeatures, self).__init__()
 
@@ -912,6 +960,131 @@ class MenuFeatures(wx.Menu):
             self.parent.paste_file_request(wx.CommandEvent)
         elif item == "Go back":
             self.parent.back_dir(wx.CommandEvent)
+
+
+class ChangePasswordDialog(wx.Dialog):
+    def __init__(self, parent, title):
+        super(ChangePasswordDialog, self).__init__(parent, title=title, size=(388, 230), pos=(960-174, 540-115))
+
+        self.panel = wx.Panel(self)
+
+        self.is_showing_password = False
+
+        hidden_path = r"C:/Users/reefg/PycharmProjects/Project_code_start/Graphics/hidden-eye.png"
+        open_path = r"C:/Users/reefg/PycharmProjects/Project_code_start/Graphics/open-eye.png"
+
+        self.hidden_bitmap = wx.Bitmap(hidden_path, wx.BITMAP_TYPE_ANY)
+        self.shown_bitmap = wx.Bitmap(open_path, wx.BITMAP_TYPE_ANY)
+
+        # Create two text boxes
+        self.old_password_ctrl = wx.TextCtrl(self.panel, size=(308, -1), style=wx.TE_PASSWORD)
+        self.new_password_ctrl = wx.TextCtrl(self.panel, size=(308, -1), style=wx.TE_PASSWORD)
+        self.confirm_password_ctrl = wx.TextCtrl(self.panel, size=(308, -1), style=wx.TE_PASSWORD)
+
+        # Create OK and Cancel buttons
+        self.ok_button = wx.Button(self.panel, label="OK")
+        self.cancel_button = wx.Button(self.panel, label="Cancel")
+
+        # Bind events to buttons
+        self.ok_button.Bind(wx.EVT_BUTTON, self.on_ok)
+        self.cancel_button.Bind(wx.EVT_BUTTON, self.on_cancel)
+
+        # Set up the layout using a box sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        entries = wx.BoxSizer(wx.VERTICAL)
+        entries.Add(wx.StaticText(self.panel, label="Enter old password:"), 0, wx.LEFT | wx.ALL)
+
+        old_password_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        old_password_sizer.Add(self.old_password_ctrl, 0, wx.CENTER | wx.ALL, 5)
+        self.old_pass_icon = wx.StaticBitmap(self.panel, wx.ID_ANY, self.hidden_bitmap)
+        self.old_pass_icon.name = "old"
+        old_password_sizer.Add(self.old_pass_icon)
+        entries.Add(old_password_sizer)
+
+        entries.AddSpacer(2)
+        entries.Add(wx.StaticText(self.panel, label="Enter new password:"), 0, wx.LEFT | wx.ALL)
+
+        new_password_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        new_password_sizer.Add(self.new_password_ctrl, 0, wx.CENTER | wx.ALL, 5)
+        self.new_pass_icon = wx.StaticBitmap(self.panel, wx.ID_ANY, self.hidden_bitmap)
+        self.new_pass_icon.name = "new"
+        new_password_sizer.Add(self.new_pass_icon)
+        entries.Add(new_password_sizer)
+
+        entries.AddSpacer(2)
+        entries.Add(wx.StaticText(self.panel, label="Confirm password:"), 0, wx.LEFT | wx.ALL)
+
+        con_password_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        con_password_sizer.Add(self.confirm_password_ctrl, 0, wx.CENTER | wx.ALL, 5)
+        self.con_pass_icon = wx.StaticBitmap(self.panel, wx.ID_ANY, self.hidden_bitmap)
+        self.con_pass_icon.name = "con"
+        con_password_sizer.Add(self.con_pass_icon)
+        entries.Add(con_password_sizer)
+
+        entries.AddSpacer(5)
+        sizer.Add(entries, 0, wx.CENTER | wx.ALL)
+
+        buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        buttons_sizer.Add(self.ok_button, 0, wx.ALL)
+        buttons_sizer.AddSpacer(10)
+        buttons_sizer.Add(self.cancel_button, 0, wx.ALL)
+        buttons_sizer.AddSpacer(15)
+
+        sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT)
+
+        self.old_pass_icon.Bind(wx.EVT_LEFT_DOWN, self.change_visibility)
+        self.new_pass_icon.Bind(wx.EVT_LEFT_DOWN, self.change_visibility)
+        self.con_pass_icon.Bind(wx.EVT_LEFT_DOWN, self.change_visibility)
+
+        self.panel.SetSizerAndFit(sizer)
+
+    def change_visibility(self, event):
+        # Get the current position and size of the existing text control
+        ctrls = {"old": self.old_password_ctrl, "new": self.new_password_ctrl, "con": self.confirm_password_ctrl}
+        name = getattr(event.GetEventObject(), 'name', None)
+        open_or_closed = self.hidden_bitmap if not self.is_showing_password else self.shown_bitmap
+
+        if name in ctrls:
+            ctrl = ctrls[name]
+
+            position = ctrl.GetPosition()
+            size = ctrl.GetSize()
+
+            # Create a new text control with the updated style
+            new_style = wx.TE_PASSWORD if not self.is_showing_password else wx.TE_PROCESS_ENTER
+            new_textctrl = wx.TextCtrl(self.panel, pos=position, size=size, style=new_style)
+
+            # Copy the text from the existing text control to the new one
+            new_textctrl.SetValue(ctrl.GetValue())
+
+            # Update the reference to the new text control
+            if name == "old":
+                self.old_pass_icon.SetBitmap(open_or_closed)
+                self.panel.GetSizer().Replace(self.old_password_ctrl, new_textctrl)
+                self.old_password_ctrl.Destroy()
+                self.old_password_ctrl = new_textctrl
+            elif name == "new":
+                self.new_pass_icon.SetBitmap(open_or_closed)
+                self.panel.GetSizer().Replace(self.new_password_ctrl, new_textctrl)
+                self.new_password_ctrl.Destroy()
+                self.new_password_ctrl = new_textctrl
+            else:
+                self.con_pass_icon.SetBitmap(open_or_closed)
+                self.panel.GetSizer().Replace(self.confirm_password_ctrl, new_textctrl)
+                self.confirm_password_ctrl.Destroy()
+                self.confirm_password_ctrl = new_textctrl
+
+            self.is_showing_password = not self.is_showing_password
+
+    def GetValues(self):
+        return [self.old_password_ctrl.GetValue(), self.new_password_ctrl.GetValue(),
+                self.confirm_password_ctrl.GetValue()]
+
+    def on_ok(self, event):
+        self.EndModal(wx.ID_OK)
+
+    def on_cancel(self, event):
+        self.EndModal(wx.ID_CANCEL)
 
 
 if __name__ == '__main__':

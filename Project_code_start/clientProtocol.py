@@ -161,12 +161,17 @@ def pack_change_username_request(username):
     return f"04{str(len(str(username))).zfill(2)}{username}"
 
 
-def pack_change_password_request(password):
+def pack_change_password_request(username, old_password, new_password, confirmed_password):
     """
-    :param password: password
+    :param: username: username of user
+    :param old_password: password
+    :param new_password: new password of user
+    :param confirmed_password: confirmation of the new password
     :return: message built py protocol
     """
-    return f"06{str(len(str(password))).zfill(2)}{password}"
+    return (f"06{str(len(str(username))).zfill(2)}{username}{str(len(str(old_password))).zfill(2)}{old_password}"
+            f"{str(len(str(new_password))).zfill(2)}{new_password}"
+            f"{str(len(str(confirmed_password))).zfill(2)}{confirmed_password}")
 
 
 def pack_change_email_request(username, email, code):

@@ -133,5 +133,5 @@ class DB:
 
 if __name__ == '__main__':
     s = DB()
-    s.delete_user("Aba")
+    s.delete_user("reef")
 

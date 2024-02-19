@@ -36,9 +36,9 @@ def _handle_messages(main_server, msg_q):
     code_dic = {}
 
     recv_commands = {"01": _handle_registration, "02": _handle_login, "05": _handle_change_email,
-                     "07": _send_email, "08": _handle_rename_file, "09": _handle_share_file,
-                     "10": _handle_delete_file, "13": _handle_create_dir, "18": _handle_move_file,
-                     "19": _handle_paste_file, "21": _handle_get_details}
+                     "06": _handle_change_password, "07": _send_email, "08": _handle_rename_file,
+                     "09": _handle_share_file, "10": _handle_delete_file, "13": _handle_create_dir,
+                     "18": _handle_move_file, "19": _handle_paste_file, "21": _handle_get_details}
 
     while True:
         ip, data = msg_q.get()
@@ -303,6 +303,15 @@ def _handle_change_email(main_server, db, client_ip, code_dic, username, email, 
             status = db.change_email(username, email)
 
     msg = serverProtocol.pack_change_email_response(status, email)
+    main_server.send(client_ip, msg)
+
+
+def _handle_change_password(main_server, db, client_ip, username, old_pass, new_pass, confirmed_pass):
+    status = 1
+    if new_pass == confirmed_pass and db.get_password(username) == encryption.hash_msg(old_pass):
+        status = db.change_password(username, encryption.hash_msg(new_pass))
+
+    msg = serverProtocol.pack_change_password_response(status)
     main_server.send(client_ip, msg)
 
 

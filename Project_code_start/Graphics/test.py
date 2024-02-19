@@ -1,47 +1,49 @@
 import wx
 
-class MySizer(wx.BoxSizer):
-    def __init__(self, *args, **kwargs):
-        super(MySizer, self).__init__(*args, **kwargs)
 
-class MyPanel(wx.Panel):
-    def __init__(self, parent, *args, **kwargs):
-        super(MyPanel, self).__init__(parent, *args, **kwargs)
-
-        self.SetDropTarget(MyDropTarget(self))
-        self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
-
-        box_sizer = MySizer(wx.HORIZONTAL)
-        box_sizer.Add(wx.Button(self, label="Button 1"), 1, wx.EXPAND)
-        self.SetSizer(box_sizer)
-
-    def OnLeftDown(self, event):
-        # Handle left mouse button down event
-        pass
-
-class MyDropTarget(wx.DropTarget):
-    def __init__(self, window):
-        super(MyDropTarget, self).__init__()
-
-        self.window = window
-        self.data = wx.TextDataObject()
-
-        self.SetDataObject(self.data)
-
-    def OnData(self, x, y, result):
-        if self.GetData():
-            print("Item dropped successfully")
-            return result
-        return wx.DragNone
-
-class MyFrame(wx.Frame):
+class PasswordFrame(wx.Frame):
     def __init__(self, *args, **kw):
-        super(MyFrame, self).__init__(*args, **kw)
+        super(PasswordFrame, self).__init__(*args, **kw)
 
-        panel = MyPanel(self)
+        self.panel = wx.Panel(self)
+        self.password_label = wx.StaticText(self.panel, label="Password:")
+        self.password_textctrl = wx.TextCtrl(self.panel, style=wx.TE_PASSWORD)
+        self.show_password_checkbox = wx.CheckBox(self.panel, label="Show Password")
 
-if __name__ == "__main__":
+        # Bind the event handler for checkbox
+        self.show_password_checkbox.Bind(wx.EVT_CHECKBOX, self.on_checkbox_checked)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.password_label, 0, wx.ALL | wx.EXPAND, 5)
+        sizer.Add(self.password_textctrl, 0, wx.ALL | wx.EXPAND, 5)
+        sizer.Add(self.show_password_checkbox, 0, wx.ALL, 5)
+
+        self.panel.SetSizerAndFit(sizer)
+        self.Show()
+
+    def on_checkbox_checked(self, event):
+        show_password = self.show_password_checkbox.GetValue()
+
+        # Get the current position and size of the existing text control
+        position = self.password_textctrl.GetPosition()
+        size = self.password_textctrl.GetSize()
+
+        # Create a new text control with the updated style
+        new_style = wx.TE_PASSWORD if not show_password else 0
+        new_textctrl = wx.TextCtrl(self.panel, pos=position, size=size, style=new_style)
+
+        # Copy the text from the existing text control to the new one
+        new_textctrl.SetValue(self.password_textctrl.GetValue())
+
+        # Replace the existing text control with the new one
+        self.panel.GetSizer().Replace(self.password_textctrl, new_textctrl)
+        self.password_textctrl.Destroy()
+
+        # Update the reference to the new text control
+        self.password_textctrl = new_textctrl
+
+
+if __name__ == '__main__':
     app = wx.App(False)
-    frame = MyFrame(None, title="Drag and Drop Example", size=(400, 300))
-    frame.Show()
+    frame = PasswordFrame(None, title="Password Visibility Toggle", size=(300, 150))
     app.MainLoop()

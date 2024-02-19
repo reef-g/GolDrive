@@ -13,7 +13,6 @@ import monitorFile
 
 
 def main_loop():
-
     msg_q = queue.Queue()
 
     client_comm = clientComm.ClientComm(Settings.SERVERIP, Settings.SERVERPORT, msg_q, 4)
@@ -27,10 +26,10 @@ def main_loop():
 
 def _handle_messages(msg_q):
     recv_commands = {"01": _handle_registration, "02": _handle_login, "03": _handle_send_files,
-                     "05": _handle_change_email, "08": _handle_rename_file, "09": _handle_share_file,
-                     "10": _handle_delete_file, "13": _handle_create_dir, "14": _handle_add_shared_file,
-                     "16": _handle_files_port, "18": _handle_move_file, "19": _handle_paste_file,
-                     "21": _handle_get_details}
+                     "05": _handle_change_email, "06": _handle_change_password, "08": _handle_rename_file,
+                     "09": _handle_share_file, "10": _handle_delete_file, "13": _handle_create_dir,
+                     "14": _handle_add_shared_file, "16": _handle_files_port, "18": _handle_move_file,
+                     "19": _handle_paste_file, "21": _handle_get_details}
 
     while True:
         data = msg_q.get()
@@ -211,6 +210,13 @@ def _handle_change_email(status, email):
         wx.CallAfter(pub.sendMessage, "changeEmailOk", email=email)
     else:
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't change email, try again.", title="Error")
+
+
+def _handle_change_password(status):
+    if status == "0":
+        wx.CallAfter(pub.sendMessage, "showPopUp", text="Password changed successfully.", title="Success")
+    else:
+        wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't change password, try again.", title="Error")
 
 
 def _handle_send_files(branches):
