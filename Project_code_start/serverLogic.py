@@ -64,7 +64,9 @@ def _handle_registration(main_server, db, client_ip, username, password, mail):
     :param mail: the mail of user
     :return: adds the user to the database and return 0 or 1 if it managed to add the user
     """
-    ans = db.add_user(username, password, mail)
+    ans = 2
+    if len(username) <= 10 and len(password) > 4:
+        ans = db.add_user(username, password, mail)
     msg = serverProtocol.pack_register_response(ans)
     main_server.send(client_ip, msg)
 

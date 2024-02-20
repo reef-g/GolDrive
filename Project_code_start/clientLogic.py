@@ -65,8 +65,10 @@ def _handle_files(files_comm, files_q):
 def _handle_registration(status):
     if status == "0":
         wx.CallAfter(pub.sendMessage, "registerOk")
-    else:
+    elif status == "1":
         wx.CallAfter(pub.sendMessage, "showPopUp", text="User already exists.", title="Error")
+    else:
+        wx.CallAfter(pub.sendMessage, "showPopUp", text="Please enter a valid username and password.", title="Error")
 
 
 def _handle_login(status):

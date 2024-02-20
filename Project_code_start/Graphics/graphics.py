@@ -71,7 +71,14 @@ class LoginPanel(wx.Panel):
 
         title_font = wx.Font(65, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False, "High Tower Text")
         text_font = wx.Font(30, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
-        entry_font = wx.Font(20, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
+        self.entry_font = wx.Font(20, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
+
+        hidden_path = f"{Settings.USER_IMAGES_PATH}\\hidden-eye.png"
+        open_path = f"{Settings.USER_IMAGES_PATH}\\open-eye.png"
+
+        self.is_showing_password = False
+        self.hidden_bitmap = wx.Bitmap(hidden_path, wx.BITMAP_TYPE_ANY)
+        self.shown_bitmap = wx.Bitmap(open_path, wx.BITMAP_TYPE_ANY)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -83,22 +90,25 @@ class LoginPanel(wx.Panel):
         name_sizer = wx.BoxSizer(wx.VERTICAL)
         name_text = wx.StaticText(self, 1, label="Username: ")
         name_text.SetFont(text_font)
-        self.nameField = wx.TextCtrl(self, -1, name="username", size=(475, 40))
-        self.nameField.SetFont(entry_font)
+        self.nameField = wx.TextCtrl(self, -1, name="username", size=(650, 40))
+        self.nameField.SetFont(self.entry_font)
 
         name_sizer.Add(name_text, 0, wx.Center, 5)
         name_sizer.Add(self.nameField)
         name_sizer.AddSpacer(15)
 
-        pass_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.pass_sizer = wx.BoxSizer(wx.HORIZONTAL)
         pass_text = wx.StaticText(self, 1, label="Password: ")
         pass_text.SetFont(text_font)
-        self.passField = wx.TextCtrl(self, -1, name="password", size=(475, 40), style=wx.TE_PASSWORD)
-        self.passField.SetFont(entry_font)
+        self.passField = wx.TextCtrl(self, -1, name="password", size=(650, 40), style=wx.TE_PASSWORD)
+        self.passField.SetFont(self.entry_font)
 
-        pass_sizer.Add(pass_text, 0, wx.Center, 5)
-        pass_sizer.Add(self.passField)
-        pass_sizer.AddSpacer(20)
+        name_sizer.Add(pass_text)
+        self.pass_sizer.AddSpacer(27)
+        self.pass_sizer.Add(self.passField)
+        self.eye_bitmap = wx.StaticBitmap(self, wx.ID_ANY, self.hidden_bitmap)
+        self.eye_bitmap.Bind(wx.EVT_LEFT_DOWN, self.change_visibility)
+        self.pass_sizer.Add(self.eye_bitmap)
 
         button_sizer = wx.BoxSizer(wx.HORIZONTAL)
         ok_button = wx.Button(self, label="LOG IN", size=(90, 40))
@@ -113,8 +123,10 @@ class LoginPanel(wx.Panel):
 
         self.sizer.AddMany([(title, 0, wx.CENTER, 10),
                             (name_sizer, 0, wx.CENTER, 5),
-                            (pass_sizer, 0, wx.CENTER, 5),
-                            (button_sizer, 0, wx.CENTER, 5)])
+                            (self.pass_sizer, 0, wx.CENTER, 5)])
+
+        self.sizer.AddSpacer(20)
+        self.sizer.Add(button_sizer, 0, wx.CENTER, 5)
 
         pub.subscribe(self.login_ok, "loginOk")
 
@@ -122,6 +134,27 @@ class LoginPanel(wx.Panel):
         self.Layout()
 
         self.Hide()
+
+    def change_visibility(self, event):
+        open_or_closed = self.hidden_bitmap if not self.is_showing_password else self.shown_bitmap
+
+        position = self.passField.GetPosition()
+        size = self.passField.GetSize()
+
+        # Create a new text control with the updated style
+        new_style = wx.TE_PASSWORD if not self.is_showing_password else wx.TE_PROCESS_ENTER
+        new_textctrl = wx.TextCtrl(self, pos=position, size=size, style=new_style)
+        new_textctrl.SetFont(self.entry_font)
+
+        # Copy the text from the existing text control to the new one
+        new_textctrl.SetValue(self.passField.GetValue())
+
+        self.eye_bitmap.SetBitmap(open_or_closed)
+        self.pass_sizer.Replace(self.passField, new_textctrl)
+        self.passField.Destroy()
+        self.passField = new_textctrl
+
+        self.is_showing_password = not self.is_showing_password
 
     def register_control(self, event):
         self.parent.change_screen(self, self.parent.register)
@@ -707,16 +740,24 @@ class UserPanel(wx.Panel):
         self.SetBackgroundColour(wx.LIGHT_GREY)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer.AddSpacer(250)
+        self.sizer.AddSpacer(80)
+
+        self.title = wx.StaticText(self, -1, label="SETTINGS")
+        font = wx.Font(65, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, 0, "High tower text")
+        self.title.SetFont(font)
+
+        self.sizer.Add(self.title, 0, wx.CENTER)
+        self.sizer.AddSpacer(130)
 
         self.titleSizer = wx.BoxSizer(wx.VERTICAL)
         self.usernameTitleSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.emailTitleSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.usernameTitle = wx.StaticText(self, -1, label=f"Username: {self.parent.username}", pos=(0, 0))
-        self.emailTitle = wx.StaticText(self, -1, label=f"Email: {self.parent.email}", pos=(0, 0))
-        titlefont = wx.Font(45, wx.DECORATIVE, wx.NORMAL, wx.NORMAL)
-        self.usernameTitle.SetFont(titlefont)
-        self.emailTitle.SetFont(titlefont)
+
+        self.usernameTitle = wx.StaticText(self, -1, label=f"Username: {self.parent.username}")
+        self.emailTitle = wx.StaticText(self, -1, label=f"Email: {self.parent.email}")
+        title_font = wx.Font(45, wx.DECORATIVE, wx.NORMAL, wx.NORMAL)
+        self.usernameTitle.SetFont(title_font)
+        self.emailTitle.SetFont(title_font)
 
         # adding padding to the text so it doesn't start from the edge
         self.usernameTitleSizer.AddSpacer(120)
@@ -727,7 +768,7 @@ class UserPanel(wx.Panel):
         self.emailTitleSizer.Add(self.emailTitle)
 
         self.titleSizer.Add(self.usernameTitleSizer)
-        self.titleSizer.AddSpacer(200)
+        self.titleSizer.AddSpacer(250)
         self.titleSizer.Add(self.emailTitleSizer)
 
         self.sizer.Add(self.titleSizer)
@@ -752,7 +793,7 @@ class UserPanel(wx.Panel):
         self.buttons_sizer.AddSpacer(20)
         self.buttons_sizer.Add(self.changePasswordButton)
 
-        self.sizer.AddSpacer(310)
+        self.sizer.AddSpacer(211)
         self.sizer.Add(self.buttons_sizer, 0, wx.CENTER)
 
         self.SetSizer(self.sizer)
@@ -858,12 +899,8 @@ class RegistrationPanel(wx.Panel):
         self.passField.SetValue("")
         self.emailField.SetValue("")
 
-        if not 0 < len(username_input) <= 10 or not 0 < len(username_input) <= 10 or not 0 < len(email_input) <= 50:
-            self.parent.show_pop_up("Please enter a valid username and password.", "Error")
-
-        else:
-            msg2send = clientProtocol.pack_register_request(username_input, password_input, email_input)
-            self.comm.send(msg2send)
+        msg2send = clientProtocol.pack_register_request(username_input, password_input, email_input)
+        self.comm.send(msg2send)
 
     def register_ok(self):
         self.parent.change_screen(self, self.parent.login)
@@ -970,8 +1007,8 @@ class ChangePasswordDialog(wx.Dialog):
 
         self.is_showing_password = False
 
-        hidden_path = r"C:/Users/reefg/PycharmProjects/Project_code_start/Graphics/hidden-eye.png"
-        open_path = r"C:/Users/reefg/PycharmProjects/Project_code_start/Graphics/open-eye.png"
+        hidden_path = f"{Settings.USER_IMAGES_PATH}\\hidden-eye.png"
+        open_path = f"{Settings.USER_IMAGES_PATH}\\open-eye.png"
 
         self.hidden_bitmap = wx.Bitmap(hidden_path, wx.BITMAP_TYPE_ANY)
         self.shown_bitmap = wx.Bitmap(open_path, wx.BITMAP_TYPE_ANY)
