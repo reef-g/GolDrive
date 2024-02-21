@@ -29,7 +29,7 @@ def _handle_messages(msg_q):
                      "05": _handle_change_email, "06": _handle_change_password, "08": _handle_rename_file,
                      "09": _handle_share_file, "10": _handle_delete_file, "13": _handle_create_dir,
                      "14": _handle_add_shared_file, "16": _handle_files_port, "18": _handle_move_file,
-                     "19": _handle_paste_file, "21": _handle_get_details}
+                     "19": _handle_paste_file}
 
     while True:
         data = msg_q.get()
@@ -49,13 +49,15 @@ def _handle_files_port(files_port):
 
 
 def _handle_files(files_comm, files_q):
-    recv_commands = {"11": _handle_download_file, "12": _handle_upload_file, "20": _handle_open_file}
+    recv_commands = {"04": _handle_change_photo, "11": _handle_download_file, "12": _handle_upload_file, "20": _handle_open_file,
+                     "21": _handle_get_details}
 
     while True:
         data = files_q.get()
-        if data[0] == "11" or data[0] == "20":
+        if data[0] == "04" or data[0] == "11" or data[0] == "20" or data[0] == "21":
             protocol_num, *params = data
-            params.insert(0, files_comm)
+            if data == "20":
+                params.insert(0, files_comm)
         else:
             protocol_num, params = clientProtocol.unpack_message(data)
 
@@ -92,7 +94,7 @@ def _handle_rename_file(status, new_name):
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't rename file.", title="Error")
 
 
-def _handle_download_file(file_comm, status, path, selected_path, data):
+def _handle_download_file(status, path, selected_path, data):
     file_name = path.split('/')[-1]
 
     if status == "0":
@@ -202,9 +204,9 @@ def _handle_paste_file(status):
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't paste file", title="Error")
 
 
-def _handle_get_details(email):
+def _handle_get_details(email, photo):
     if email:
-        wx.CallAfter(pub.sendMessage, "detailsOk", email=email)
+        wx.CallAfter(pub.sendMessage, "detailsOk", email=email, photo=photo)
 
 
 def _handle_change_email(status, email):
@@ -219,6 +221,13 @@ def _handle_change_password(status):
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Password changed successfully.", title="Success")
     else:
         wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't change password, try again.", title="Error")
+
+
+def _handle_change_photo(data):
+    if data:
+        wx.CallAfter(pub.sendMessage, "changePhotoOk", data=data)
+    else:
+        wx.CallAfter(pub.sendMessage, "showPopUp", text="Couldn't change photo, try again.", title="Error")
 
 
 def _handle_send_files(branches):

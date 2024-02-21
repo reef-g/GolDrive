@@ -1,3 +1,4 @@
+import io
 import os
 from settings import Settings
 import wx
@@ -27,9 +28,12 @@ class MainPanel(wx.Panel):
         wx.Panel.__init__(self, parent)
         self.frame = parent
         self.comm = comm
+        self.files_comm = None
         self.SetBackgroundColour(wx.LIGHT_GREY)
         self.username = None
         self.email = None
+        self.profilePhoto = None
+
         v_box = wx.BoxSizer()
         # create object for each panel
         self.login = LoginPanel(self, self.frame, self.comm)
@@ -46,6 +50,7 @@ class MainPanel(wx.Panel):
         self.Layout()
 
         pub.subscribe(self.show_pop_up, "showPopUp")
+        pub.subscribe(self._files_comm_update, "updateFileComm")
 
     def change_screen(self, cur_screen, screen):
         cur_screen.Hide()
@@ -59,6 +64,9 @@ class MainPanel(wx.Panel):
         dlg = wx.MessageDialog(self, text, title, wx.OK | wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
+
+    def _files_comm_update(self, filecomm):
+        self.files_comm = filecomm
 
 
 class LoginPanel(wx.Panel):
@@ -129,6 +137,7 @@ class LoginPanel(wx.Panel):
         self.sizer.Add(button_sizer, 0, wx.CENTER, 5)
 
         pub.subscribe(self.login_ok, "loginOk")
+        pub.subscribe(self._get_details, "detailsOk")
 
         self.SetSizer(self.sizer)
         self.Layout()
@@ -162,7 +171,7 @@ class LoginPanel(wx.Panel):
     def login_ok(self):
         self.parent.files.title.SetLabel(self.parent.username.upper())
         msg = clientProtocol.pack_get_details_request(self.parent.username)
-        self.comm.send(msg)
+        self.parent.files_comm.send(msg)
         self.parent.change_screen(self, self.parent.files)
 
     def on_ok(self, event):
@@ -178,6 +187,11 @@ class LoginPanel(wx.Panel):
             self.parent.username = username_input
             msg2send = clientProtocol.pack_login_request(username_input, password_input)
             self.comm.send(msg2send)
+
+    def _get_details(self, email, photo):
+        self.parent.email = email
+        self.parent.profilePhoto = photo
+        wx.CallAfter(pub.sendMessage, "changeSettingsToPhoto")
 
 
 class MyDropTarget(wx.DropTarget):
@@ -222,7 +236,6 @@ class FilesPanel(wx.Panel):
         self.frame = frame
         self.comm = comm
         self.parent = parent
-        self.files_comm = None
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -308,16 +321,21 @@ class FilesPanel(wx.Panel):
         pub.subscribe(self._handle_paste_file, "pasteFile")
         pub.subscribe(self._show_progress_bar, "startBar")
         pub.subscribe(self._change_progress_bar, "changeProgress")
-        pub.subscribe(self._files_comm_update, "updateFileComm")
-        pub.subscribe(self._get_details, "detailsOk")
+        pub.subscribe(self.change_settings_to_profile, "changeSettingsToPhoto")
 
         self.Layout()
         self.Hide()
         self.drop_target = MyDropTarget(self)
         self.SetDropTarget(self.drop_target)
 
-    def _get_details(self, email):
-        self.parent.email = email
+    def change_settings_to_profile(self):
+        image = wx.Image(io.BytesIO(self.parent.profilePhoto), wx.BITMAP_TYPE_ANY)
+        image.Rescale(108, 108)
+
+        # Convert the wx.Image to a wx.Bitmap
+        bitmap = wx.Bitmap(image)
+
+        self.settings_img.SetBitmap(bitmap)
 
     def show_menu(self, event):
         flag = True
@@ -361,9 +379,6 @@ class FilesPanel(wx.Panel):
                     text_data_object.SetText(item.GetName())
 
         return flag, text_data_object
-
-    def _files_comm_update(self, filecomm):
-        self.files_comm = filecomm
 
     def login_control(self, event):
         self.parent.change_screen(self, self.parent.login)
@@ -567,7 +582,7 @@ class FilesPanel(wx.Panel):
             selected_path = dlg.GetPath().replace('\\', '/')
 
             msg2send = clientProtocol.pack_download_file_request(f"{self.parent.username}/{self.curPath}/{file_name}", selected_path)
-            self.files_comm.send(msg2send)
+            self.parent.files_comm.send(msg2send)
 
         dlg.Destroy()
 
@@ -577,7 +592,7 @@ class FilesPanel(wx.Panel):
 
         if result == wx.ID_OK:
             selected_path = dlg.GetPath().replace('\\', '/')
-            self.files_comm.send_file(selected_path, f"{self.parent.username}/{self.curPath}".rstrip('/'))
+            self.parent.files_comm.send_file(12, selected_path, f"{self.parent.username}/{self.curPath}".rstrip('/'))
 
     def _upload_object(self, path):
         name_to_add = path.split('/')[-1]
@@ -703,7 +718,7 @@ class FilesPanel(wx.Panel):
             msg2send = clientProtocol.pack_open_file_request(
                 f"{self.parent.username}/{self.curPath}/{name}".replace("//", '/')
             )
-            self.files_comm.send(msg2send)
+            self.parent.files_comm.send(msg2send)
         except Exception as e:
             print(str(e))
 
@@ -723,22 +738,22 @@ class FilesPanel(wx.Panel):
             self.progressDialog.Destroy()
 
     def show_settings(self, event):
-        settings = UserPanel(self.parent, self.frame, self.comm, self.parent.username, self.parent.email)
+        settings = UserPanel(self.parent, self.frame, self.comm, self.parent.files_comm)
 
         self.parent.change_screen(self, settings)
 
 
 class UserPanel(wx.Panel):
-    def __init__(self, parent, frame, comm, name, email):
+    def __init__(self, parent, frame, comm, files_comm):
         wx.Panel.__init__(self, parent, pos=wx.DefaultPosition, size=(1920, 1080), style=wx.SIMPLE_BORDER)
         self.frame = frame
         self.comm = comm
+        self.files_comm = files_comm
         self.parent = parent
-        self.name = name
 
-        self.email = email
         self.SetBackgroundColour(wx.LIGHT_GREY)
 
+        self.selected_path = ""
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.AddSpacer(80)
 
@@ -759,11 +774,11 @@ class UserPanel(wx.Panel):
         self.usernameTitle.SetFont(title_font)
         self.emailTitle.SetFont(title_font)
 
-        # adding padding to the text so it doesn't start from the edge
+        # adding padding to the text, so it doesn't start from the edge
         self.usernameTitleSizer.AddSpacer(120)
         self.usernameTitleSizer.Add(self.usernameTitle)
 
-        # adding padding to the text so it doesn't start from the edge
+        # adding padding to the text, so it doesn't start from the edge
         self.emailTitleSizer.AddSpacer(120)
         self.emailTitleSizer.Add(self.emailTitle)
 
@@ -777,11 +792,13 @@ class UserPanel(wx.Panel):
         self.filesButton = wx.Button(self, label="BACK TO FILES")
         self.changeEmailButton = wx.Button(self, label="CHANGE EMAIL")
         self.changePasswordButton = wx.Button(self, label="CHANGE PASSWORD")
+        self.changePhotoButton = wx.Button(self, label="CHANGE PROFILE PHOTO")
 
         self.loginButton.Bind(wx.EVT_BUTTON, self.login_control)
         self.filesButton.Bind(wx.EVT_BUTTON, self.files_control)
         self.changeEmailButton.Bind(wx.EVT_BUTTON, self.change_email_request)
         self.changePasswordButton.Bind(wx.EVT_BUTTON, self.change_password_request)
+        self.changePhotoButton.Bind(wx.EVT_BUTTON, self.change_photo_request)
 
         self.buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -792,6 +809,8 @@ class UserPanel(wx.Panel):
         self.buttons_sizer.Add(self.changeEmailButton)
         self.buttons_sizer.AddSpacer(20)
         self.buttons_sizer.Add(self.changePasswordButton)
+        self.buttons_sizer.AddSpacer(20)
+        self.buttons_sizer.Add(self.changePhotoButton)
 
         self.sizer.AddSpacer(211)
         self.sizer.Add(self.buttons_sizer, 0, wx.CENTER)
@@ -800,6 +819,7 @@ class UserPanel(wx.Panel):
         self.Layout()
 
         pub.subscribe(self._change_email, "changeEmailOk")
+        pub.subscribe(self._change_photo, "changePhotoOk")
 
         self.Hide()
 
@@ -853,6 +873,25 @@ class UserPanel(wx.Panel):
             msg = clientProtocol.pack_change_password_request(self.parent.username, *values)
             self.comm.send(msg)
         password_dlg.Destroy()
+
+    def change_photo_request(self, event):
+        dlg = wx.FileDialog(self, "Choose a file", style=wx.DD_DEFAULT_STYLE)
+        result = dlg.ShowModal()
+
+        if result == wx.ID_OK:
+            self.selected_path = dlg.GetPath().replace('\\', '/')
+            self.files_comm.send_file(4, self.selected_path, self.parent.username)
+
+    def _change_photo(self, data):
+        self.parent.profilePhoto = data
+
+        image = wx.Image(io.BytesIO(self.parent.profilePhoto), wx.BITMAP_TYPE_ANY)
+        image.Rescale(108, 108)
+
+        # Convert the wx.Image to a wx.Bitmap
+        bitmap = wx.Bitmap(image)
+
+        self.parent.files.settings_img.SetBitmap(bitmap)
 
 
 class RegistrationPanel(wx.Panel):

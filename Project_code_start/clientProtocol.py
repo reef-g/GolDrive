@@ -22,17 +22,17 @@ def unpack_message(msg):
     return opcode, data_from_msg
 
 
-def get_data_from_string(line, leng):
+def get_data_from_string(line, length):
     """
     :param line: line to slice
-    :param leng: length to slice
+    :param length: length to slice
     :return:
     """
     # getting the data from the length of the string
-    data = line[leng:leng + int(line[:leng])]
+    data = line[length:length + int(line[:length])]
 
     # substring
-    line = line[leng + int(line[:leng])::]
+    line = line[length + int(line[:length])::]
 
     return data, line
 
@@ -153,17 +153,19 @@ def pack_share_request(path, username):
     return f"09{str(len(path)).zfill(2)}{path}{str(len(username)).zfill(2)}{username}"
 
 
-def pack_change_username_request(username):
+def pack_change_photo_request(username, file_len):
     """
     :param username: username to change to
+    :param file_len: length of the photo
     :return: message built py protocol
     """
-    return f"04{str(len(str(username))).zfill(2)}{username}"
+    print(file_len)
+    return f"04{str(len(str(username))).zfill(2)}{username}{str(len(str(file_len))).zfill(2)}{file_len}"
 
 
 def pack_change_password_request(username, old_password, new_password, confirmed_password):
     """
-    :param: username: username of user
+    :param username: username of user
     :param old_password: password
     :param new_password: new password of user
     :param confirmed_password: confirmation of the new password

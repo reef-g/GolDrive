@@ -38,7 +38,7 @@ def _handle_messages(main_server, msg_q):
     recv_commands = {"01": _handle_registration, "02": _handle_login, "05": _handle_change_email,
                      "06": _handle_change_password, "07": _send_email, "08": _handle_rename_file,
                      "09": _handle_share_file, "10": _handle_delete_file, "13": _handle_create_dir,
-                     "18": _handle_move_file, "19": _handle_paste_file, "21": _handle_get_details}
+                     "18": _handle_move_file, "19": _handle_paste_file}
 
     while True:
         ip, data = msg_q.get()
@@ -60,12 +60,13 @@ def _handle_registration(main_server, db, client_ip, username, password, mail):
     :param db: the database
     :param client_ip: the clients ip
     :param username: the username of user
-    :param password: the password of user
+    :param password: the password of userf
     :param mail: the mail of user
     :return: adds the user to the database and return 0 or 1 if it managed to add the user
     """
     ans = 2
-    if len(username) <= 10 and len(password) > 4:
+
+    if 4 <= len(username) <= 10 and len(password) >= 4:
         ans = db.add_user(username, password, mail)
     msg = serverProtocol.pack_register_response(ans)
     main_server.send(client_ip, msg)
@@ -89,34 +90,39 @@ def _handle_login(main_server, db, client_ip, ip_by_users, username, password):
     if encryption.hash_msg(password) == db.get_password(username):
         status = 0
 
-    msg = serverProtocol.pack_login_response(status)
-    main_server.send(client_ip, msg)
-
     if status == 0:
         ip_by_users[username] = client_ip
         port_to_give = portsHandler.PortsHandler.get_next_port()
         files_q = queue.Queue()
         files_server = serverComm.ServerComm(port_to_give, files_q, 10)
-        threading.Thread(target=handle_files, args=(files_server, files_q,)).start()
+        threading.Thread(target=handle_files, args=(files_server, files_q, db,)).start()
         port_msg = serverProtocol.pack_upload_port(port_to_give)
         main_server.send(client_ip, port_msg)
 
         main_server.send(client_ip, serverProtocol.pack_files_message(username))
 
+    msg = serverProtocol.pack_login_response(status)
+    main_server.send(client_ip, msg)
 
-def handle_files(files_server, files_q):
-    recv_commands = {"11": _handle_download_file, "12": _handle_upload_file, "20": _handle_open_file}
+
+def handle_files(files_server, files_q, db):
+    recv_commands = {"04": _handle_change_photo, "11": _handle_download_file, "12": _handle_upload_file,
+                     "20": _handle_open_file, "21": _handle_get_details}
 
     while True:
         ip, data = files_q.get()
 
-        if data[0] == "12":
-            protocol_num, *params = data
-        else:
-            protocol_num, params = serverProtocol.unpack_message(data)
+        if len(data) != 0:
+            if data[0] == "12" or data[0] == "04":
+                protocol_num, *params = data
+            else:
+                protocol_num, params = serverProtocol.unpack_message(data)
 
-        if protocol_num in recv_commands.keys():
-            recv_commands[protocol_num](files_server, ip, *params)
+            if protocol_num == "21":
+                params.insert(0, db)
+
+            if protocol_num in recv_commands.keys():
+                recv_commands[protocol_num](files_server, ip, *params)
 
 
 def _handle_delete_file(main_server, db, client_ip, path):
@@ -214,8 +220,9 @@ def _handle_share_file(main_server, db, client_ip, ip_by_users, path, username):
                 print(str(e))
 
         try:
-            shutil.copy(f"{Settings.USER_FILES_PATH}/{path}", f"{Settings.USER_FILES_PATH}/{username}/@#$SHAREDFILES$#@/"
-                                                              f"{user_who_shared}")
+            shutil.copy(f"{Settings.USER_FILES_PATH}/{path}",
+                        f"{Settings.USER_FILES_PATH}/{username}/@#$SHAREDFILES$#@/"
+                        f"{user_who_shared}")
         except Exception as e:
             print(str(e))
             status = 1
@@ -255,11 +262,11 @@ def _handle_paste_file(main_server, db, client_ip, src, dst):
     main_server.send(client_ip, msg)
 
 
-def _handle_get_details(main_server, db, client_ip, username):
+def _handle_get_details(main_server, client_ip, db, username):
     email = db.get_email(username)
 
-    msg = serverProtocol.pack_get_details_response(email)
-    main_server.send(client_ip, msg)
+    params = ('21', username, email)
+    main_server.send_file(client_ip, params)
 
 
 def _send_email(main_server, my_db, client_ip, code_dic, email):
@@ -317,9 +324,15 @@ def _handle_change_password(main_server, db, client_ip, username, old_pass, new_
     main_server.send(client_ip, msg)
 
 
+def _handle_change_photo(files_server, client_ip, username, photo_data):
+    try:
+        with open(f"{Settings.USER_PROFILE_PHOTOS}/{username}.png", 'wb' if type(photo_data) is bytes else 'w') as f:
+            f.write(photo_data)
+    except Exception as e:
+        print(str(e))
 
-
-
+    params = ("04", username)
+    files_server.send_file(client_ip, params)
 
 
 if __name__ == '__main__':

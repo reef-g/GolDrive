@@ -150,12 +150,12 @@ def pack_share_response(response):
     return f"09{str(len(str(response))).zfill(2)}{response}"
 
 
-def pack_change_username_response(response):
+def pack_change_photo_response(response, file_len):
     """
-    :param response: response to change username
+    :param response: response to change photo
     :return: opcode + length + response
     """
-    return f"04{str(len(str(response))).zfill(2)}{response}"
+    return f"04{str(len(str(response))).zfill(2)}{response}{str(len(str(file_len))).zfill(2)}{file_len}"
 
 
 def pack_change_password_response(response):
@@ -200,13 +200,14 @@ def pack_paste_file_response(status):
     return f"19{str(len(str(status))).zfill(2)}{status}"
 
 
-def pack_open_file_response(status, file_path, datalen):
-    return f"20{str(len(str(status))).zfill(2)}{status}{str(len(str(datalen))).zfill(2)}{datalen}" \
+def pack_open_file_response(status, file_path, data_len):
+    return f"20{str(len(str(status))).zfill(2)}{status}{str(len(str(data_len))).zfill(2)}{data_len}" \
            f"{str(len(str(file_path))).zfill(2)}{file_path}"
 
 
-def pack_get_details_response(email):
-    return f"21{str(len(email)).zfill(2)}{email}"
+def pack_get_details_response(status, email, data_len):
+    return (f"21{str(len(str(status))).zfill(2)}{status}"
+            f"{str(len(str(email))).zfill(2)}{email}{str(len(str(data_len))).zfill(2)}{data_len}")
 
 
 if __name__ == '__main__':

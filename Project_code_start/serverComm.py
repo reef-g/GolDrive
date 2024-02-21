@@ -1,3 +1,4 @@
+import os.path
 import socket
 import select
 import threading
@@ -65,8 +66,8 @@ class ServerComm:
                         else:
                             opcode, params = serverProtocol.unpack_message(decrypted_data)
 
-                            if opcode == "12":
-                                self.recv_file(currSocket, *params)
+                            if opcode == "12" or opcode == "04":
+                                self.recv_file(opcode, currSocket, *params)
                             else:
                                 self.recv_q.put((self.openClients[currSocket][0], decrypted_data))
 
@@ -137,10 +138,11 @@ class ServerComm:
         """
         return self.isRunning
 
-    def recv_file(self, client, file_path, file_len):
+    def recv_file(self, opcode, client, file_path, file_len):
         data = bytearray()
         file_len = int(file_len)
         ip = self.openClients[client][0]
+
         try:
             while len(data) < file_len:
                 slices = file_len - len(data)
@@ -150,49 +152,82 @@ class ServerComm:
                     data.extend(client.recv(slices))
                     break
         except Exception as e:
-            self.recv_q.put((ip, ("12", file_path, None)))
+            if opcode == "12":
+                self.recv_q.put((ip, ("12", file_path, None)))
+            else:
+                self.recv_q.put((ip, ("04", file_path, None)))
             print("main server in recv file comm ", str(e))
             self._handle_disconnect(client)
         else:
             decData = self.openClients[client][1].dec_msg(data)
-            self.recv_q.put((ip, ("12", file_path, decData)))
+            if opcode == "12":
+                self.recv_q.put((ip, ("12", file_path, decData)))
+            else:
+                self.recv_q.put((ip, ("04", file_path, decData)))
 
     def send_file(self, client_ip, params):
-        path, selected_path = "", ""
-        if params[0] == "11":
-            path = params[1]
-            selected_path = params[2]
-        else:
-            path = params[1]
+        path, selected_path, email, username = "", "", "", ""
 
-        client_socket = self._find_socket_by_ip(client_ip)
-        if client_socket:
-            status = 0
-            try:
-                with open(f"{Settings.USER_FILES_PATH}/{path}", 'rb') as f:
-                    data = f.read()
-            except Exception as e:
-                print(str(e))
-                status = 1
-                if params[0] == "11":
-                    msg = serverProtocol.pack_file_download_response(status, 0, path, selected_path)
-                else:
-                    msg = serverProtocol.pack_open_file_response(status, path, 0)
-                self.send(client_ip, msg)
-
+        try:
+            if params[0] == "04":
+                username = params[1]
+            elif params[0] == "11":
+                path = params[1]
+                selected_path = params[2]
+            elif params[0] == "21":
+                username = params[1]
+                email = params[2]
             else:
-                cryptFile = self.openClients[client_socket][1].enc_msg(data)
-                if params[0] == "11":
-                    msg = serverProtocol.pack_file_download_response(status, len(cryptFile), path, selected_path)
-                else:
-                    msg = serverProtocol.pack_open_file_response(status, path, len(cryptFile))
+                path = params[1]
+        except Exception as e:
+            print(str(e))
 
-                self.send(client_ip, msg)
+        else:
+            client_socket = self._find_socket_by_ip(client_ip)
+            if client_socket:
+                status = 0
+
+                # if the user doesn't have a profile photo we give him the default photo.
+                # its d since username cant be 1 char long
+                if not os.path.isfile(f"{Settings.USER_PROFILE_PHOTOS}/{username}.png"):
+                    username = 'd'
+
+                path_to_read = f"{Settings.USER_FILES_PATH}/{path}" if params[0] != "21" and params[0] != "04" else \
+                    f"{Settings.USER_PROFILE_PHOTOS}/{username}.png"
+
                 try:
-                    client_socket.send(cryptFile)
+                    with open(path_to_read, 'rb') as f:
+                        data = f.read()
                 except Exception as e:
                     print(str(e))
-                    self._handle_disconnect(client_socket)
+                    status = 1
+                    if params[0] == "04":
+                        msg = serverProtocol.pack_change_photo_response(status, 0)
+                    elif params[0] == "11":
+                        msg = serverProtocol.pack_file_download_response(status, 0, path, selected_path)
+                    elif params[0] == "21":
+                        msg = serverProtocol.pack_get_details_response(status, None, 0)
+                    else:
+                        msg = serverProtocol.pack_open_file_response(status, path, 0)
+                    self.send(client_ip, msg)
+
+                else:
+                    cryptFile = self.openClients[client_socket][1].enc_msg(data)
+                    if params[0] == "04":
+                        msg = serverProtocol.pack_change_photo_response(status, len(cryptFile))
+                    elif params[0] == "11":
+                        msg = serverProtocol.pack_file_download_response(status, len(cryptFile), path, selected_path)
+                    elif params[0] == "21":
+                        msg = serverProtocol.pack_get_details_response(status, len(cryptFile), email)
+                    else:
+                        msg = serverProtocol.pack_open_file_response(status, path, len(cryptFile))
+
+                    self.send(client_ip, msg)
+                    try:
+                        client_socket.send(cryptFile)
+                    except Exception as e:
+                        print(str(e))
+                        self._handle_disconnect(client_socket)
 
 
 

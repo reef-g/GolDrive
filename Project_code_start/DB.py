@@ -17,7 +17,7 @@ class DB:
         create table
         :return:
         """
-        self.conn = sqlite3.connect(self.DB_name)
+        self.conn = sqlite3.connect(self.DB_name, check_same_thread=False)
         self.curr = self.conn.cursor()
         sql = "CREATE TABLE IF NOT EXISTS users (username VARCHAR(10) PRIMARY KEY," \
               " password VARCHAR(64), email VARCHAR(50))"

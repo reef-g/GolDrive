@@ -41,7 +41,8 @@ class ClientComm:
                 self.recvQ.put(decrypted_data)
             else:
                 opcode, params = clientProtocol.unpack_message(decrypted_data)
-                if opcode == "11" or opcode == "20":
+
+                if opcode == "04" or opcode == "11" or opcode == "20" or opcode == "21":
                     if params[0] == "0":
                         params = (opcode, *params[1:])
                         self._recv_file(params)
@@ -80,10 +81,14 @@ class ClientComm:
 
     def _recv_file(self, params):
         opcode = params[0]
-        path, selected_path, Type = "", "", ""
-        if opcode == "11":
+        path, selected_path, Type, email = "", "", "", ""
+        if opcode == "04":
+            file_len = params[1]
+        elif opcode == "11":
             file_len, path, selected_path = params[1:]
             wx.CallAfter(pub.sendMessage, "startBar", name=path.split('/')[-1])
+        elif opcode == "21":
+            file_len, email = params[1:]
         else:
             file_len, Type = params[1:]
 
@@ -104,22 +109,31 @@ class ClientComm:
                     break
 
         except Exception as e:
-            if opcode == "11":
+            if opcode == "04":
+                self.recvQ.put(("04", '1', None))
+            elif opcode == "11":
                 self.recvQ.put(("11", '1', path, selected_path, None))
+            elif opcode == "21":
+                self.recvQ.put(("21", None, None))
             else:
                 self.recvQ.put(("20", '1', Type, None))
 
             print("main server in recv file comm ", str(e))
             self._close()
         else:
-            if opcode == "11":
+            if opcode == "04":
+                self.recvQ.put(("04", self.enc_obj.dec_msg(data)))
+            elif opcode == "11":
                 wx.CallAfter(pub.sendMessage, "changeProgress",
                              percent=int((len(data) / file_len) * 100))
                 self.recvQ.put(("11", '0', path, selected_path, self.enc_obj.dec_msg(data)))
+            elif opcode == "21":
+                self.recvQ.put(("21", email, self.enc_obj.dec_msg(data)))
+
             else:
                 self.recvQ.put(("20", '0', Type, self.enc_obj.dec_msg(data)))
 
-    def send_file(self, path, currPath):
+    def send_file(self, opcode, path, currPath):
         try:
             with open(path, 'rb') as f:
                 data = f.read()
@@ -128,7 +142,11 @@ class ClientComm:
 
         else:
             cryptFile = self.enc_obj.enc_msg(data)
-            msg = clientProtocol.pack_upload_file_request(f"{currPath}/{path.split('/')[-1]}".lstrip('/'), len(cryptFile))
+            if opcode == 12:
+                msg = clientProtocol.pack_upload_file_request(f"{currPath}/{path.split('/')[-1]}".lstrip('/'), len(cryptFile))
+            else:
+                msg = clientProtocol.pack_change_photo_request(currPath, len(cryptFile))
+
             self.send(msg)
             try:
                 self.socket.send(cryptFile)
