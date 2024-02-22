@@ -84,9 +84,10 @@ class ClientComm:
         path, selected_path, Type, email = "", "", "", ""
         if opcode == "04":
             file_len = params[1]
+            wx.CallAfter(pub.sendMessage, "startBar", name=path.split('/')[-1], opcode=opcode)
         elif opcode == "11":
             file_len, path, selected_path = params[1:]
-            wx.CallAfter(pub.sendMessage, "startBar", name=path.split('/')[-1])
+            wx.CallAfter(pub.sendMessage, "startBar", name=path.split('/')[-1], opcode=opcode)
         elif opcode == "21":
             file_len, email = params[1:]
         else:
@@ -100,9 +101,9 @@ class ClientComm:
                 slices = file_len - len(data)
 
                 if slices > 1024:
-                    if opcode == "11":
+                    if opcode == "11" or opcode == "04":
                         wx.CallAfter(pub.sendMessage, "changeProgress",
-                                     percent=int((len(data) / file_len) * 100))
+                                     percent=int((len(data) / file_len) * 100), opcode=opcode)
                     data.extend(self.socket.recv(1024))
                 else:
                     data.extend(self.socket.recv(slices))
@@ -122,10 +123,12 @@ class ClientComm:
             self._close()
         else:
             if opcode == "04":
+                wx.CallAfter(pub.sendMessage, "changeProgress",
+                             percent=int((len(data) / file_len) * 100), opcode=opcode)
                 self.recvQ.put(("04", self.enc_obj.dec_msg(data)))
             elif opcode == "11":
                 wx.CallAfter(pub.sendMessage, "changeProgress",
-                             percent=int((len(data) / file_len) * 100))
+                             percent=int((len(data) / file_len) * 100), opcode=opcode)
                 self.recvQ.put(("11", '0', path, selected_path, self.enc_obj.dec_msg(data)))
             elif opcode == "21":
                 self.recvQ.put(("21", email, self.enc_obj.dec_msg(data)))

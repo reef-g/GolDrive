@@ -107,7 +107,7 @@ def _handle_login(main_server, db, client_ip, ip_by_users, username, password):
 
 def handle_files(files_server, files_q, db):
     recv_commands = {"04": _handle_change_photo, "11": _handle_download_file, "12": _handle_upload_file,
-                     "20": _handle_open_file, "21": _handle_get_details}
+                     "20": _handle_open_file, "21": _handle_get_details, "22": _handle_delete_profile_photo}
 
     while True:
         ip, data = files_q.get()
@@ -295,7 +295,6 @@ def _send_email(main_server, my_db, client_ip, code_dic, email):
 
         # Send the email
         smtp_server.sendmail(sender_email, receiver_email, message.as_string())
-        print("Email sent successfully!")
 
     except smtplib.SMTPException as e:
         print(f"Error: {e}")
@@ -310,6 +309,7 @@ def _handle_change_email(main_server, db, client_ip, code_dic, username, email, 
     if email in code_dic:
         if code_dic[email] == code:
             status = db.change_email(username, email)
+            del code_dic[email]
 
     msg = serverProtocol.pack_change_email_response(status, email)
     main_server.send(client_ip, msg)
@@ -333,6 +333,13 @@ def _handle_change_photo(files_server, client_ip, username, photo_data):
 
     params = ("04", username)
     files_server.send_file(client_ip, params)
+
+
+def _handle_delete_profile_photo(files_server, client_ip, username):
+    status = sFileHandler.delete_file(f"{Settings.USER_PROFILE_PHOTOS}/{username}.png")
+    if status == 0:
+        params = ("04", 'd')
+        files_server.send_file(client_ip, params)
 
 
 if __name__ == '__main__':

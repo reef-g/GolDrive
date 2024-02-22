@@ -329,6 +329,7 @@ class FilesPanel(wx.Panel):
         self.SetDropTarget(self.drop_target)
 
     def change_settings_to_profile(self):
+
         image = wx.Image(io.BytesIO(self.parent.profilePhoto), wx.BITMAP_TYPE_ANY)
         image.Rescale(108, 108)
 
@@ -722,15 +723,18 @@ class FilesPanel(wx.Panel):
         except Exception as e:
             print(str(e))
 
-    def _show_progress_bar(self, name):
-        self.progressDialog = wx.ProgressDialog(title=name, message="Download at 0%", maximum=100,
+    def _show_progress_bar(self, name, opcode):
+        msg = "Download" if opcode != "04" else "Upload"
+        msg += f" at 0%"
+
+        self.progressDialog = wx.ProgressDialog(title=name, message=msg, maximum=100,
                                                 style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE)
 
-    def _change_progress_bar(self, percent):
+    def _change_progress_bar(self, percent, opcode):
         while not self.progressDialog:
             pass
 
-        self.progressDialog.Update(percent, f"Download at {percent}%")
+        self.progressDialog.Update(percent, f"Download at {percent}%" if opcode != "04" else f"Upload at {percent}%")
         # wasting time to show update of percent
         time.sleep(0.0001)
 
@@ -755,18 +759,26 @@ class UserPanel(wx.Panel):
 
         self.selected_path = ""
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer.AddSpacer(80)
+        self.sizer.AddSpacer(2)
 
         self.title = wx.StaticText(self, -1, label="SETTINGS")
         font = wx.Font(65, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, 0, "High tower text")
         self.title.SetFont(font)
-
         self.sizer.Add(self.title, 0, wx.CENTER)
-        self.sizer.AddSpacer(130)
+
+        image = wx.Image(io.BytesIO(self.parent.profilePhoto), wx.BITMAP_TYPE_ANY)
+        image.Rescale(108, 108)
+
+        # Convert the wx.Image to a wx.Bitmap
+        bitmap = wx.Bitmap(image)
+
+        self.settings_img = wx.StaticBitmap(self, wx.ID_ANY, bitmap)
 
         self.titleSizer = wx.BoxSizer(wx.VERTICAL)
         self.usernameTitleSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.emailTitleSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.imageSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.userAndImageSizer = wx.BoxSizer(wx.HORIZONTAL)
 
         self.usernameTitle = wx.StaticText(self, -1, label=f"Username: {self.parent.username}")
         self.emailTitle = wx.StaticText(self, -1, label=f"Email: {self.parent.email}")
@@ -778,27 +790,33 @@ class UserPanel(wx.Panel):
         self.usernameTitleSizer.AddSpacer(120)
         self.usernameTitleSizer.Add(self.usernameTitle)
 
+        # adding padding to the image, so it doesn't start from the edge
+        self.imageSizer.Add(self.settings_img)
+        self.imageSizer.AddSpacer(17)  # Adjust the spacing if needed
+
         # adding padding to the text, so it doesn't start from the edge
         self.emailTitleSizer.AddSpacer(120)
         self.emailTitleSizer.Add(self.emailTitle)
 
-        self.titleSizer.Add(self.usernameTitleSizer)
-        self.titleSizer.AddSpacer(250)
-        self.titleSizer.Add(self.emailTitleSizer)
-
-        self.sizer.Add(self.titleSizer)
+        self.sizer.Add(self.imageSizer, 0, wx.ALIGN_RIGHT)
+        self.sizer.Add(self.usernameTitleSizer)
+        self.sizer.AddSpacer(350)
+        self.sizer.Add(self.emailTitleSizer)
 
         self.loginButton = wx.Button(self, label="BACK TO LOGIN")
         self.filesButton = wx.Button(self, label="BACK TO FILES")
         self.changeEmailButton = wx.Button(self, label="CHANGE EMAIL")
         self.changePasswordButton = wx.Button(self, label="CHANGE PASSWORD")
         self.changePhotoButton = wx.Button(self, label="CHANGE PROFILE PHOTO")
+        self.deletePhotoButton = wx.Button(self, label="DELETE PROFILE PHOTO")
 
         self.loginButton.Bind(wx.EVT_BUTTON, self.login_control)
         self.filesButton.Bind(wx.EVT_BUTTON, self.files_control)
         self.changeEmailButton.Bind(wx.EVT_BUTTON, self.change_email_request)
         self.changePasswordButton.Bind(wx.EVT_BUTTON, self.change_password_request)
         self.changePhotoButton.Bind(wx.EVT_BUTTON, self.change_photo_request)
+        self.deletePhotoButton.Bind(wx.EVT_BUTTON, self.delete_photo_request)
+        self.settings_img.Bind(wx.EVT_RIGHT_DOWN, self.show_setttings_menu)
 
         self.buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -811,6 +829,8 @@ class UserPanel(wx.Panel):
         self.buttons_sizer.Add(self.changePasswordButton)
         self.buttons_sizer.AddSpacer(20)
         self.buttons_sizer.Add(self.changePhotoButton)
+        self.buttons_sizer.AddSpacer(20)
+        self.buttons_sizer.Add(self.deletePhotoButton)
 
         self.sizer.AddSpacer(211)
         self.sizer.Add(self.buttons_sizer, 0, wx.CENTER)
@@ -875,7 +895,13 @@ class UserPanel(wx.Panel):
         password_dlg.Destroy()
 
     def change_photo_request(self, event):
-        dlg = wx.FileDialog(self, "Choose a file", style=wx.DD_DEFAULT_STYLE)
+        image_types = ["apng", "avif", "gif", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp", "bmp", "ico",
+                       "cur", "tif", "tiff"]
+
+        what_to_show = ([f'*.{image_type}' for image_type in image_types])
+        wildcard = f"Image Files ({';'.join(what_to_show)})|{';'.join(what_to_show)}"
+
+        dlg = wx.FileDialog(self, "Choose a file", wildcard=wildcard, style=wx.DD_DEFAULT_STYLE)
         result = dlg.ShowModal()
 
         if result == wx.ID_OK:
@@ -892,6 +918,19 @@ class UserPanel(wx.Panel):
         bitmap = wx.Bitmap(image)
 
         self.parent.files.settings_img.SetBitmap(bitmap)
+        self.settings_img.SetBitmap(bitmap)
+
+    def delete_photo_request(self, event):
+        verify_dlg = wx.MessageDialog(self, f'Are you sure you want to delete your profile photo?',
+                                      'Confirmation', wx.YES_NO | wx.ICON_QUESTION)
+        result = verify_dlg.ShowModal()
+
+        if result == wx.ID_YES:
+            msg = clientProtocol.pack_delete_profile_photo_request(self.parent.username)
+            self.files_comm.send(msg)
+
+    def show_setttings_menu(self, event):
+        self.PopupMenu(ProfileSettings(self))
 
 
 class RegistrationPanel(wx.Panel):
@@ -1036,6 +1075,34 @@ class MenuFeatures(wx.Menu):
             self.parent.paste_file_request(wx.CommandEvent)
         elif item == "Go back":
             self.parent.back_dir(wx.CommandEvent)
+
+
+class ProfileSettings(wx.Menu):
+    def __init__(self, parent):
+        super(ProfileSettings, self).__init__()
+
+        self.parent = parent
+        self.pos = wx.GetMousePosition()
+
+        self.Append(wx.MenuItem(self, -1, 'Change profile photo'))
+        self.Append(wx.MenuItem(self, -1, 'Clear profile photo'))
+
+        self.AppendSeparator()
+
+        self.Append(wx.MenuItem(self, -1, "Cancel"))
+
+        # Bind the menu item click event
+        self.Bind(wx.EVT_MENU, self.on_menu_item_click)
+
+    def on_menu_item_click(self, event):
+        item_id = event.GetId()
+        clicked_item = self.FindItemById(item_id)
+
+        item = clicked_item.GetItemLabelText()
+        if item == "Change profile photo":
+            self.parent.change_photo_request(wx.CommandEvent)
+        elif item == "Clear profile photo":
+            self.parent.delete_photo_request(wx.CommandEvent)
 
 
 class ChangePasswordDialog(wx.Dialog):

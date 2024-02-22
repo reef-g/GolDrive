@@ -159,7 +159,6 @@ def pack_change_photo_request(username, file_len):
     :param file_len: length of the photo
     :return: message built py protocol
     """
-    print(file_len)
     return f"04{str(len(str(username))).zfill(2)}{username}{str(len(str(file_len))).zfill(2)}{file_len}"
 
 
@@ -201,6 +200,10 @@ def pack_open_file_request(path):
 
 def pack_get_details_request(username):
     return f"21{str(len(str(username))).zfill(2)}{username}"
+
+
+def pack_delete_profile_photo_request(username):
+    return f"22{str(len(str(username))).zfill(2)}{username}"
 
 
 if __name__ == '__main__':

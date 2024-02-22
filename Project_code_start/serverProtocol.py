@@ -210,6 +210,10 @@ def pack_get_details_response(status, email, data_len):
             f"{str(len(str(email))).zfill(2)}{email}{str(len(str(data_len))).zfill(2)}{data_len}")
 
 
+def pack_delete_profile_photo_response(status):
+    return f"22{str(len(str(status))).zfill(2)}{status}"
+
+
 if __name__ == '__main__':
     code, data_from_message = unpack_message("1210reef/reef1000012")
     dataa = pack_files_message("reef")

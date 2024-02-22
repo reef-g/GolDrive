@@ -17,16 +17,17 @@ def rename_file(path, new_name):
 
 
 def delete_file(path):
-    status = 1
+    status = 0
     if os.path.exists(path):
         try:
             os.remove(path)
-            status = 0
+
             print("Deleted file at - " + path)
         except Exception as e:
             print(str(e))
+            status = 1
     else:
-        print("Isn't a file")
+        status = 2
 
     return status
 
