@@ -1,6 +1,6 @@
 import wx
 from pubsub import pub
-from settings import HomeSettings as Settings
+from settings import CurrentSettings as Settings
 from ClientFiles import clientProtocol
 from .customMenusAndDialogs import ConfirmMailDialog
 
@@ -17,6 +17,7 @@ class LoginPanel(wx.Panel):
 
         title_font = wx.Font(65, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False, "High Tower Text")
         text_font = wx.Font(30, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
+        forgot_password_font = wx.Font(15, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
         self.entry_font = wx.Font(20, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
 
         hidden_path = f"{Settings.USER_IMAGES_PATH}\\hidden-eye.png"
@@ -27,6 +28,8 @@ class LoginPanel(wx.Panel):
         self.shown_bitmap = wx.Bitmap(open_path, wx.BITMAP_TYPE_ANY)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
+        entries = wx.BoxSizer(wx.VERTICAL)
+        forgot_password_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         self.sizer.AddSpacer(290)
         title = wx.StaticText(self, -1, label="LOG IN")
@@ -56,6 +59,16 @@ class LoginPanel(wx.Panel):
         self.eye_bitmap.Bind(wx.EVT_LEFT_DOWN, self.change_visibility)
         self.pass_sizer.Add(self.eye_bitmap)
 
+        entries.Add(name_sizer, 0, wx.CENTER, 5)
+        entries.Add(self.pass_sizer, 0, wx.CENTER, 10)
+
+        forgot_password_sizer.AddSpacer(28)
+        self.forgot_password = wx.StaticText(self, -1, "Forgot password")
+        self.forgot_password.SetFont(forgot_password_font)
+        self.forgot_password.SetForegroundColour("#87A7AF")
+        forgot_password_sizer.Add(self.forgot_password)
+        entries.Add(forgot_password_sizer)
+
         button_sizer = wx.BoxSizer(wx.HORIZONTAL)
         ok_button = wx.Button(self, label="LOG IN", size=(90, 40))
         self.Bind(wx.EVT_BUTTON, self.on_ok, ok_button)
@@ -68,8 +81,7 @@ class LoginPanel(wx.Panel):
         button_sizer.Add(register_button, 0, wx.CENTER, 10)
 
         self.sizer.AddMany([(title, 0, wx.CENTER, 10),
-                            (name_sizer, 0, wx.CENTER, 5),
-                            (self.pass_sizer, 0, wx.CENTER, 5)])
+                            (entries, 0, wx.CENTER, 5)])
 
         self.sizer.AddSpacer(20)
         self.sizer.Add(button_sizer, 0, wx.CENTER, 5)

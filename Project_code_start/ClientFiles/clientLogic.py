@@ -2,7 +2,7 @@ import os.path
 import queue
 import clientComm
 import clientProtocol
-from settings import HomeSettings as Settings
+from settings import CurrentSettings as Settings
 import threading
 from Graphics import mainPanel
 from Graphics.mainPanel import MainFrame
@@ -26,16 +26,16 @@ def main_loop():
 
 
 def _handle_messages(msg_q):
-    recv_commands = {"01": _handle_registration, "02": _show_login_dialog, "03": _handle_send_files,
+    recv_commands = {"01": _show_register_dialog, "02": _show_login_dialog, "03": _handle_send_files,
                      "05": _handle_change_email, "06": _handle_change_password, "08": _handle_rename_file,
                      "09": _handle_share_file, "10": _handle_delete_file, "13": _handle_create_dir,
                      "14": _handle_add_shared_file, "16": _handle_files_port, "18": _handle_move_file,
-                     "19": _handle_paste_file, "23": _handle_login}
+                     "19": _handle_paste_file, "23": _handle_login, "24": _handle_register}
 
     while True:
         data = msg_q.get()
         protocol_num, params = clientProtocol.unpack_message(data)
-        print(protocol_num)
+
         if protocol_num == "03":
             # since * breaks the list down and we want the whole list
             _handle_send_files(params)
@@ -66,13 +66,22 @@ def _handle_files(files_comm, files_q):
         recv_commands[protocol_num](*params)
 
 
-def _handle_registration(status):
+def _show_register_dialog(status, username, password, email):
+    if status == "0":
+        wx.CallAfter(pub.sendMessage, "showRegisterDialog", username=username, password=password, email=email)
+    elif status == "1":
+        wx.CallAfter(pub.sendMessage, "showPopUp", text="User already exists.", title="Error")
+    else:
+        wx.CallAfter(pub.sendMessage, "showPopUp", text="Please enter a valid username and password.", title="Error")
+
+
+def _handle_register(status):
     if status == "0":
         wx.CallAfter(pub.sendMessage, "registerOk")
     elif status == "1":
         wx.CallAfter(pub.sendMessage, "showPopUp", text="User already exists.", title="Error")
     else:
-        wx.CallAfter(pub.sendMessage, "showPopUp", text="Please enter a valid username and password.", title="Error")
+        wx.CallAfter(pub.sendMessage, "showPopUp", text="Wrong code entered.", title="Error")
 
 
 def _show_login_dialog(status, email):
@@ -140,7 +149,7 @@ def _handle_open_file(file_comm, status, server_path, data):
         try:
             os.mkdir(path)
             file_path = f"{path}/{file_name}"
-            with open(file_path, 'wb' if type(data) == bytes else 'w') as f:
+            with open(file_path, 'wb' if type(data) is bytes else 'w') as f:
                 f.write(data)
 
         except Exception as e:

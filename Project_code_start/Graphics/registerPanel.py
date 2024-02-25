@@ -1,6 +1,7 @@
 import wx
 from pubsub import pub
 from ClientFiles import clientProtocol
+from .customMenusAndDialogs import ConfirmMailDialog
 
 
 class RegistrationPanel(wx.Panel):
@@ -10,6 +11,10 @@ class RegistrationPanel(wx.Panel):
         self.comm = comm
         self.parent = parent
         self.SetBackgroundColour(wx.LIGHT_GREY)
+
+        self.username = None
+        self.password = None
+        self.email = None
 
         title = wx.StaticText(self, -1, label="Register panel", pos=(0, 0))
         titlefont = wx.Font(22, wx.DECORATIVE, wx.NORMAL, wx.NORMAL)
@@ -28,7 +33,8 @@ class RegistrationPanel(wx.Panel):
         email_text = wx.StaticText(self, 1, pos=(10, 140), label="Email: ")
         self.emailField = wx.TextCtrl(self, -1, name="email", pos=(10, 160), size=(150, -1))
 
-        pub.subscribe(self.register_ok, "registerOk")
+        pub.subscribe(self.register_ok, "showRegisterDialog")
+        pub.subscribe(self.verify_ok, "registerOk")
 
         register_button = wx.Button(self, label="REGISTER", pos=(120, 190))
         self.Bind(wx.EVT_BUTTON, self.on_register, register_button)
@@ -50,6 +56,20 @@ class RegistrationPanel(wx.Panel):
         msg2send = clientProtocol.pack_register_request(username_input, password_input, email_input)
         self.comm.send(msg2send)
 
-    def register_ok(self):
+    def register_ok(self, username, password, email):
+        self.username = username
+        self.password = password
+        self.email = email
+
+        con = ConfirmMailDialog(self, "Verify")
+        result = con.ShowModal()
+
+        if result == wx.ID_OK:
+            values = con.GetValues()
+
+            msg = clientProtocol.pack_verify_register_email_request(username, password, email, *values)
+            self.comm.send(msg)
+
+    def verify_ok(self):
+        self.parent.show_pop_up("User created successfully.", "Success")
         self.parent.change_screen(self, self.parent.login)
-        self.parent.show_pop_up("User created successfully.", "Message")

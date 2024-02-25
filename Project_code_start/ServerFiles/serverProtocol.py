@@ -1,5 +1,5 @@
 import os
-from settings import HomeSettings as Settings
+from settings import CurrentSettings as Settings
 
 
 def unpack_message(msg):
@@ -68,12 +68,16 @@ def pack_files_message(username):
     return files_of_user
 
 
-def pack_register_response(response):
+def pack_register_response(response, username, password, email):
     """
     :param response: response to register
+    :param username: username of user
+    :param password: password of user
+    :param email: email of user
     :return: opcode + length + response
     """
-    return f"01{str(len(str(response))).zfill(2)}{response}"
+    return (f"01{str(len(str(response))).zfill(2)}{response}{str(len(str(username))).zfill(2)}{username}"
+            f"{str(len(str(password))).zfill(2)}{password}{str(len(str(email))).zfill(2)}{email}")
 
 
 def pack_login_response(response, email):
@@ -212,6 +216,10 @@ def pack_get_details_response(status, email, data_len):
 
 def pack_delete_profile_photo_response(status):
     return f"22{str(len(str(status))).zfill(2)}{status}"
+
+
+def pack_register_verify_response(status):
+    return f"24{str(len(str(status))).zfill(2)}{status}"
 
 
 if __name__ == '__main__':

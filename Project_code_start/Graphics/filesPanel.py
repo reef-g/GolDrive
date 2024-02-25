@@ -5,7 +5,7 @@ import os
 from pubsub import pub
 from .userPanel import UserPanel
 from .customMenusAndDialogs import UserMenuFeatures, FileMenuFeatures
-from settings import HomeSettings as Settings
+from settings import CurrentSettings as Settings
 from ClientFiles import clientProtocol
 
 

@@ -3,7 +3,7 @@ import threading
 import sys
 import queue
 import encryption
-from settings import HomeSettings as Settings
+from settings import CurrentSettings as Settings
 import clientProtocol
 import wx
 from pubsub import pub
@@ -67,6 +67,9 @@ class ClientComm:
             return crypto
 
     def send(self, msg):
+        while not self.enc_obj:
+            pass
+
         encrypt_data = self.enc_obj.enc_msg(msg)
 
         # the length of the encrypted message

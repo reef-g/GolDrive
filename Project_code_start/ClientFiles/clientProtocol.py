@@ -211,6 +211,12 @@ def pack_verify_login_email_request(email, code, dont_ask_again, username):
             f"{str(len(str(dont_ask_again))).zfill(2)}{dont_ask_again}{str(len(str(username))).zfill(2)}{username}")
 
 
+def pack_verify_register_email_request(username, password, email, code, dont_ask_again):
+    return (f"24{str(len(str(username))).zfill(2)}{username}{str(len(str(password))).zfill(2)}{password}"
+            f"{str(len(str(email))).zfill(2)}{email}{str(len(str(code))).zfill(2)}{code}"
+            f"{str(len(str(dont_ask_again))).zfill(2)}{dont_ask_again}")
+
+
 if __name__ == '__main__':
     print(unpack_files_message("000007folder10009fil1.docx\n07folder10008checking0000\n16folder1\\checking00000000"))
 

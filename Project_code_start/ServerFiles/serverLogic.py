@@ -4,7 +4,7 @@ import threading
 import portsHandler
 import serverComm
 import serverProtocol
-from settings import HomeSettings as Settings
+from settings import CurrentSettings as Settings
 import DB
 import encryption
 import sFileHandler
@@ -38,14 +38,15 @@ def _handle_messages(main_server, msg_q):
     recv_commands = {"01": _handle_registration, "02": _handle_login, "05": _handle_change_email,
                      "06": _handle_change_password, "07": _send_email, "08": _handle_rename_file,
                      "09": _handle_share_file, "10": _handle_delete_file, "13": _handle_create_dir,
-                     "18": _handle_move_file, "19": _handle_paste_file, "23": _handle_email_login}
+                     "18": _handle_move_file, "19": _handle_paste_file, "23": _handle_email_login,
+                     "24": _handle_email_register}
 
     while True:
         ip, data = msg_q.get()
         protocol_num, params = serverProtocol.unpack_message(data)
-        if protocol_num == "05" or protocol_num == "07" or protocol_num == "02" or protocol_num == "23":
+        if protocol_num == "01" or protocol_num == "05" or protocol_num == "07" or protocol_num == "02" or protocol_num == "23" or protocol_num == "24":
             params.insert(0, code_dic)
-        if protocol_num == "02" or protocol_num == "09":
+        if protocol_num == "02" or protocol_num == "09" or protocol_num == "23":
             params.insert(0, ip_by_username)
 
         if protocol_num in recv_commands.keys():
@@ -54,21 +55,41 @@ def _handle_messages(main_server, msg_q):
             print(f"{protocol_num} not in recv commands.")
 
 
-def _handle_registration(main_server, db, client_ip, username, password, mail):
+def _handle_registration(main_server, db, client_ip, code_dic, username, password, email):
     """
     :param main_server: the server object
     :param db: the database
     :param client_ip: the clients ip
     :param username: the username of user
-    :param password: the password of userf
-    :param mail: the mail of user
+    :param password: the password of user
+    :param email: the email of user
     :return: adds the user to the database and return 0 or 1 if it managed to add the user
     """
+    status = 2
+
+    if 10 >= len(username) >= 4 and len(password) >=4:
+        if not db.username_exist(username):
+            status = 0
+            _send_email(main_server, db, client_ip, code_dic, email)
+        else:
+            status = 1
+
+    msg = serverProtocol.pack_register_response(status, username, password, email)
+    main_server.send(client_ip, msg)
+
+
+def _handle_email_register(main_server, db, client_ip, code_dic, username, password, email, code, dont_ask_again):
     ans = 2
 
-    if 4 <= len(username) <= 10 and len(password) >= 4:
-        ans = db.add_user(username, password, mail)
-    msg = serverProtocol.pack_register_response(ans)
+    if email in code_dic:
+        if code_dic[email] == code:
+            if 4 <= len(username) <= 10 and len(password) >= 4:
+                ans = db.add_user(username, password, email)
+
+            if ans == 0 and dont_ask_again == "True":
+                db.add_remembered_ip(username, client_ip)
+
+    msg = serverProtocol.pack_register_verify_response(ans)
     main_server.send(client_ip, msg)
 
     if ans == 0:
@@ -95,19 +116,10 @@ def _handle_login(main_server, db, client_ip, ip_by_users, code_dic, username, p
     msg = serverProtocol.pack_login_response(status, email)
 
     if status == 0:
-        ip_by_users[username] = client_ip
-        port_to_give = portsHandler.PortsHandler.get_next_port()
-        files_q = queue.Queue()
-        files_server = serverComm.ServerComm(port_to_give, files_q, 10)
-        threading.Thread(target=handle_files, args=(files_server, files_q, db,)).start()
-        port_msg = serverProtocol.pack_upload_port(port_to_give)
-        main_server.send(client_ip, port_msg)
-
-        main_server.send(client_ip, serverProtocol.pack_files_message(username))
-
         remembered_ips = db.get_ips_of_user(username)
 
         if client_ip in remembered_ips:
+            _create_files_thread(main_server, db, client_ip, ip_by_users, username)
             msg = serverProtocol.pack_login_verify_response(status)
         else:
             _send_email(main_server, db, client_ip, code_dic, email)
@@ -115,12 +127,14 @@ def _handle_login(main_server, db, client_ip, ip_by_users, code_dic, username, p
     main_server.send(client_ip, msg)
 
 
-def _handle_email_login(main_server, db, client_ip, code_dic, email, code, dont_ask_again, username):
+def _handle_email_login(main_server, db, client_ip, ip_by_users, code_dic, email, code, dont_ask_again, username):
     status = 1
 
     if email in code_dic:
         if code_dic[email] == code:
             status = 0
+
+            _create_files_thread(main_server, db, client_ip, ip_by_users, username)
 
             if dont_ask_again == "True":
                 db.add_remembered_ip(username, client_ip)
@@ -129,13 +143,25 @@ def _handle_email_login(main_server, db, client_ip, code_dic, email, code, dont_
     main_server.send(client_ip, msg)
 
 
+def _create_files_thread(main_server, db, client_ip, ip_by_users, username):
+    ip_by_users[username] = client_ip
+    port_to_give = portsHandler.PortsHandler.get_next_port()
+    files_q = queue.Queue()
+    files_server = serverComm.ServerComm(port_to_give, files_q, 10)
+    threading.Thread(target=handle_files, args=(files_server, files_q, db,)).start()
+    port_msg = serverProtocol.pack_upload_port(port_to_give)
+    main_server.send(client_ip, port_msg)
+
+    main_server.send(client_ip, serverProtocol.pack_files_message(username))
+
+
 def handle_files(files_server, files_q, db):
     recv_commands = {"04": _handle_change_photo, "11": _handle_download_file, "12": _handle_upload_file,
                      "20": _handle_open_file, "21": _handle_get_details, "22": _handle_delete_profile_photo}
 
     while True:
         ip, data = files_q.get()
-        print(data)
+
         if len(data) != 0:
             if data[0] == "12" or data[0] == "04":
                 protocol_num, *params = data
@@ -294,7 +320,6 @@ def _handle_get_details(main_server, client_ip, db, username):
 
 
 def _send_email(main_server, my_db, client_ip, code_dic, email):
-    print(email)
     # Email credentials
     sender_email = "goldriveauth@gmail.com"
     receiver_email = email

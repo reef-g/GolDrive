@@ -163,4 +163,8 @@ class DB:
 if __name__ == '__main__':
     s = DB()
     s.delete_user("reef")
-
+    s.delete_user("check")
+    s.delete_user("check2")
+    s.delete_user("check3")
+    s.delete_user("check4")
+    s.delete_user("check5")

@@ -1,4 +1,4 @@
-from settings import HomeSettings as Settings
+from settings import CurrentSettings as Settings
 import wx
 
 

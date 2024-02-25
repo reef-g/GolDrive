@@ -3,7 +3,7 @@ import socket
 import select
 import threading
 import queue
-from settings import HomeSettings as Settings
+from settings import CurrentSettings as Settings
 import serverProtocol
 import encryption
 
