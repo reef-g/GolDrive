@@ -191,6 +191,10 @@ def pack_add_shared_file(path):
     return f"14{str(len(str(path))).zfill(2)}{path}"
 
 
+def pack_send_email_response(status, email):
+    return f"17{str(len(str(status))).zfill(2)}{status}{str(len(str(email))).zfill(2)}{email}"
+
+
 def pack_move_file_response(status, new_folder):
     """
     :param status:
@@ -220,6 +224,14 @@ def pack_delete_profile_photo_response(status):
 
 def pack_register_verify_response(status):
     return f"24{str(len(str(status))).zfill(2)}{status}"
+
+
+def pack_check_code_response(status):
+    return f"25{str(len(str(status))).zfill(2)}{status}"
+
+
+def pack_forgot_password_response(status):
+    return f"26{str(len(str(status))).zfill(2)}{status}"
 
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@ class ClassSettings:
     def __init__(self):
         self.SERVERPORT = 1234
         self.SERVERIP = "192.168.4.75"
-        self.USER_IMAGES_PATH = r"D:\!ReefGold\Project_code_start\Graphics".replace("\\", '/')
+        self.USER_IMAGES_PATH = r"D:\!ReefGold\Project_code_start\UserGraphics".replace("\\", '/')
         self.USER_FILES_PATH = r"D:\!ReefGold\users_files".replace("\\", '/')
         self.USER_PROFILE_PHOTOS = r"D:\!ReefGold\user_profile_photos".replace('\\', '/')
 
@@ -17,7 +17,7 @@ class HomeSettings():
 
 
 class CurrentSettings:
-    settings = HomeSettings()
+    settings = ClassSettings()
     SERVERPORT = settings.SERVERPORT
     SERVERIP = settings.SERVERIP
     USER_IMAGES_PATH = settings.USER_IMAGES_PATH

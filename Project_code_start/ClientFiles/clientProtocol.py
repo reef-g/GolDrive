@@ -186,6 +186,10 @@ def pack_change_email_request(username, email, code):
             f"{str(len(str(code))).zfill(2)}{code}")
 
 
+def pack_send_email_request(username):
+    return f"17{str(len(str(username))).zfill(2)}{username}"
+
+
 def pack_move_file_folder_request(src, dst):
     return f"18{str(len(str(src))).zfill(2)}{src}{str(len(str(dst))).zfill(2)}{dst}"
 
@@ -212,9 +216,18 @@ def pack_verify_login_email_request(email, code, dont_ask_again, username):
 
 
 def pack_verify_register_email_request(username, password, email, code, dont_ask_again):
-    return (f"24{str(len(str(username))).zfill(2)}{username}{str(len(str(password))).zfill(2)}{password}"
-            f"{str(len(str(email))).zfill(2)}{email}{str(len(str(code))).zfill(2)}{code}"
-            f"{str(len(str(dont_ask_again))).zfill(2)}{dont_ask_again}")
+    return f"24{str(len(str(username))).zfill(2)}{username}{str(len(str(password))).zfill(2)}{password}" \
+        f"{str(len(str(email))).zfill(2)}{email}{str(len(str(code))).zfill(2)}{code}" \
+        f"{str(len(str(dont_ask_again))).zfill(2)}{dont_ask_again}"
+
+
+def pack_check_code_request(email, code):
+    return f"25{str(len(str(email))).zfill(2)}{email}{str(len(str(code))).zfill(2)}{code}"
+
+
+def pack_forgot_password_request(username, password, confirmed_pass):
+    return f"26{str(len(str(username))).zfill(2)}{username}{str(len(str(password))).zfill(2)}{password}" \
+        f"{str(len(str(confirmed_pass))).zfill(2)}{confirmed_pass}"
 
 
 if __name__ == '__main__':

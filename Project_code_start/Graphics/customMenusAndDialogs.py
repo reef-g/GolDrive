@@ -262,7 +262,7 @@ class ConfirmMailDialog(wx.Dialog):
         self.text_ctrl = wx.TextCtrl(self.panel, size=(340, -1))
         self.sizer.Add(self.text_ctrl, 0, wx.CENTER)
 
-        self.remember_checkbox = wx.CheckBox(self.panel, label="Remember Me")
+        self.remember_checkbox = wx.CheckBox(self.panel, label="Don't ask again on this computer.")
         self.sizer.Add(self.remember_checkbox, 0, wx.ALL, 5)
 
         # Create OK and Cancel buttons
@@ -285,6 +285,114 @@ class ConfirmMailDialog(wx.Dialog):
 
     def GetValues(self):
         return [self.text_ctrl.GetValue(), self.remember_checkbox.GetValue()]
+
+    def on_ok(self, event):
+        self.EndModal(wx.ID_OK)
+
+    def on_cancel(self, event):
+        self.EndModal(wx.ID_CANCEL)
+
+
+class ForgotPasswordDialog(wx.Dialog):
+    def __init__(self, parent, title):
+        super(ForgotPasswordDialog, self).__init__(parent, title=title, size=(388, 185), pos=(960-174, 540-115))
+
+        self.panel = wx.Panel(self)
+
+        self.is_showing_password = False
+
+        hidden_path = f"{Settings.USER_IMAGES_PATH}\\hidden-eye.png"
+        open_path = f"{Settings.USER_IMAGES_PATH}\\open-eye.png"
+
+        self.hidden_bitmap = wx.Bitmap(hidden_path, wx.BITMAP_TYPE_ANY)
+        self.shown_bitmap = wx.Bitmap(open_path, wx.BITMAP_TYPE_ANY)
+
+        # Create two text boxes
+        self.new_password_ctrl = wx.TextCtrl(self.panel, size=(308, -1), style=wx.TE_PASSWORD)
+        self.confirm_password_ctrl = wx.TextCtrl(self.panel, size=(308, -1), style=wx.TE_PASSWORD)
+
+        # Create OK and Cancel buttons
+        self.ok_button = wx.Button(self.panel, label="OK")
+        self.cancel_button = wx.Button(self.panel, label="Cancel")
+
+        # Bind events to buttons
+        self.ok_button.Bind(wx.EVT_BUTTON, self.on_ok)
+        self.cancel_button.Bind(wx.EVT_BUTTON, self.on_cancel)
+
+        # Set up the layout using a box sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        entries = wx.BoxSizer(wx.VERTICAL)
+
+        entries.Add(wx.StaticText(self.panel, label="Enter new password:"), 0, wx.LEFT | wx.ALL)
+
+        new_password_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        new_password_sizer.Add(self.new_password_ctrl, 0, wx.CENTER | wx.ALL, 5)
+        self.new_pass_icon = wx.StaticBitmap(self.panel, wx.ID_ANY, self.hidden_bitmap)
+        self.new_pass_icon.name = "new"
+        new_password_sizer.Add(self.new_pass_icon)
+        entries.Add(new_password_sizer)
+
+        entries.AddSpacer(2)
+        entries.Add(wx.StaticText(self.panel, label="Confirm password:"), 0, wx.LEFT | wx.ALL)
+
+        con_password_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        con_password_sizer.Add(self.confirm_password_ctrl, 0, wx.CENTER | wx.ALL, 5)
+        self.con_pass_icon = wx.StaticBitmap(self.panel, wx.ID_ANY, self.hidden_bitmap)
+        self.con_pass_icon.name = "con"
+        con_password_sizer.Add(self.con_pass_icon)
+        entries.Add(con_password_sizer)
+
+        entries.AddSpacer(5)
+        sizer.Add(entries, 0, wx.CENTER | wx.ALL)
+
+        buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        buttons_sizer.Add(self.ok_button, 0, wx.ALL)
+        buttons_sizer.AddSpacer(10)
+        buttons_sizer.Add(self.cancel_button, 0, wx.ALL)
+        buttons_sizer.AddSpacer(15)
+
+        sizer.Add(buttons_sizer, 0, wx.ALIGN_RIGHT)
+
+        self.new_pass_icon.Bind(wx.EVT_LEFT_DOWN, self.change_visibility)
+        self.con_pass_icon.Bind(wx.EVT_LEFT_DOWN, self.change_visibility)
+
+        self.panel.SetSizerAndFit(sizer)
+
+    def change_visibility(self, event):
+        # Get the current position and size of the existing text control
+        ctrls = {"new": self.new_password_ctrl, "con": self.confirm_password_ctrl}
+        name = getattr(event.GetEventObject(), 'name', None)
+        open_or_closed = self.hidden_bitmap if not self.is_showing_password else self.shown_bitmap
+
+        if name in ctrls:
+            ctrl = ctrls[name]
+
+            position = ctrl.GetPosition()
+            size = ctrl.GetSize()
+
+            # Create a new text control with the updated style
+            new_style = wx.TE_PASSWORD if not self.is_showing_password else wx.TE_PROCESS_ENTER
+            new_textctrl = wx.TextCtrl(self.panel, pos=position, size=size, style=new_style)
+
+            # Copy the text from the existing text control to the new one
+            new_textctrl.SetValue(ctrl.GetValue())
+
+            # Update the reference to the new text control
+            if name == "new":
+                self.new_pass_icon.SetBitmap(open_or_closed)
+                self.panel.GetSizer().Replace(self.new_password_ctrl, new_textctrl)
+                self.new_password_ctrl.Destroy()
+                self.new_password_ctrl = new_textctrl
+            else:
+                self.con_pass_icon.SetBitmap(open_or_closed)
+                self.panel.GetSizer().Replace(self.confirm_password_ctrl, new_textctrl)
+                self.confirm_password_ctrl.Destroy()
+                self.confirm_password_ctrl = new_textctrl
+
+            self.is_showing_password = not self.is_showing_password
+
+    def GetValues(self):
+        return [self.new_password_ctrl.GetValue(),self.confirm_password_ctrl.GetValue()]
 
     def on_ok(self, event):
         self.EndModal(wx.ID_OK)

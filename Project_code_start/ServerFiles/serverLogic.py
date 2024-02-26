@@ -38,14 +38,17 @@ def _handle_messages(main_server, msg_q):
     recv_commands = {"01": _handle_registration, "02": _handle_login, "05": _handle_change_email,
                      "06": _handle_change_password, "07": _send_email, "08": _handle_rename_file,
                      "09": _handle_share_file, "10": _handle_delete_file, "13": _handle_create_dir,
-                     "18": _handle_move_file, "19": _handle_paste_file, "23": _handle_email_login,
-                     "24": _handle_email_register}
+                     "17": _handle_send_email, "18": _handle_move_file, "19": _handle_paste_file,
+                     "23": _handle_email_login, "24": _handle_email_register, "25": _handle_check_email,
+                     "26": _handle_forgot_password}
 
     while True:
         ip, data = msg_q.get()
         protocol_num, params = serverProtocol.unpack_message(data)
-        if protocol_num == "01" or protocol_num == "05" or protocol_num == "07" or protocol_num == "02" or protocol_num == "23" or protocol_num == "24":
+        if protocol_num == "01" or protocol_num == "05" or protocol_num == "07" or protocol_num == "02" or \
+                protocol_num == "17" or protocol_num == "23" or protocol_num == "24" or protocol_num == "25":
             params.insert(0, code_dic)
+
         if protocol_num == "02" or protocol_num == "09" or protocol_num == "23":
             params.insert(0, ip_by_username)
 
@@ -67,7 +70,7 @@ def _handle_registration(main_server, db, client_ip, code_dic, username, passwor
     """
     status = 2
 
-    if 10 >= len(username) >= 4 and len(password) >=4:
+    if 10 >= len(username) >= 4 and len(password) >= 4:
         if not db.username_exist(username):
             status = 0
             _send_email(main_server, db, client_ip, code_dic, email)
@@ -367,7 +370,7 @@ def _handle_change_email(main_server, db, client_ip, code_dic, username, email, 
 
 def _handle_change_password(main_server, db, client_ip, username, old_pass, new_pass, confirmed_pass):
     status = 1
-    if new_pass == confirmed_pass and db.get_password(username) == encryption.hash_msg(old_pass):
+    if new_pass == confirmed_pass and db.get_password(username) == encryption.hash_msg(old_pass) and len(new_pass) >= 4:
         status = db.change_password(username, encryption.hash_msg(new_pass))
 
     msg = serverProtocol.pack_change_password_response(status)
@@ -390,6 +393,40 @@ def _handle_delete_profile_photo(files_server, client_ip, username):
     if status == 0:
         params = ("04", 'd')
         files_server.send_file(client_ip, params)
+
+
+def _handle_send_email(main_server, db, client_ip, code_dic, username):
+    email = db.get_email(username)
+    _send_email(main_server, db, client_ip, code_dic, email)
+
+    if email:
+        status = 0
+    else:
+        status = 1
+
+    msg = serverProtocol.pack_send_email_response(status, email)
+    main_server.send(client_ip, msg)
+
+
+def _handle_check_email(main_server, db, client_ip, code_dic, email, code):
+    status = 1
+
+    if email in code_dic:
+        if code_dic[email] == code:
+            status = 0
+
+    msg = serverProtocol.pack_check_code_response(status)
+    main_server.send(client_ip, msg)
+
+
+def _handle_forgot_password(main_server, db, client_ip, username, password, confirmed_password):
+    status = 1
+
+    if password == confirmed_password and len(password) >= 4:
+        status = db.change_password(username, encryption.hash_msg(password))
+
+    msg = serverProtocol.pack_forgot_password_response(status)
+    main_server.send(client_ip, msg)
 
 
 if __name__ == '__main__':

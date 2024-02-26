@@ -28,7 +28,7 @@ class DB:
         """
         create_users_ips = """
         CREATE TABLE IF NOT EXISTS ipByUser(
-            username VARCHAR(10) PRIMARY KEY,
+            username VARCHAR(10),
             ip VARCHAR(15));
         """
 
@@ -153,6 +153,8 @@ class DB:
                 rememberedIps.append(ip)
 
         return rememberedIps
+
+
 
     def add_remembered_ip(self, username, ip):
         sql = "INSERT INTO ipByUser VALUES (?,?)"

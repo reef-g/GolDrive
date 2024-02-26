@@ -2,7 +2,7 @@ import wx
 from pubsub import pub
 from settings import CurrentSettings as Settings
 from ClientFiles import clientProtocol
-from .customMenusAndDialogs import ConfirmMailDialog
+from .customMenusAndDialogs import ConfirmMailDialog, ForgotPasswordDialog
 
 
 class LoginPanel(wx.Panel):
@@ -66,6 +66,7 @@ class LoginPanel(wx.Panel):
         self.forgot_password = wx.StaticText(self, -1, "Forgot password")
         self.forgot_password.SetFont(forgot_password_font)
         self.forgot_password.SetForegroundColour("#87A7AF")
+        self.forgot_password.Bind(wx.EVT_LEFT_DOWN, self._get_user_forgot_password)
         forgot_password_sizer.Add(self.forgot_password)
         entries.Add(forgot_password_sizer)
 
@@ -89,6 +90,8 @@ class LoginPanel(wx.Panel):
         pub.subscribe(self.login_ok, "showLoginDialog")
         pub.subscribe(self.verify_ok, "loginOk")
         pub.subscribe(self._get_details, "detailsOk")
+        pub.subscribe(self._email_ok, "forgotPassEmailOk")
+        pub.subscribe(self._send_forgot_password_request, "showForgotPassDialog")
 
         self.SetSizer(self.sizer)
         self.Layout()
@@ -158,3 +161,39 @@ class LoginPanel(wx.Panel):
         wx.CallAfter(pub.sendMessage, "changeSettingsToPhoto")
 
         self.parent.change_screen(self, self.parent.files)
+
+    def _get_user_forgot_password(self, event):
+        dlg = wx.TextEntryDialog(self, f'Enter username of user:', 'Verify', '')
+        result = dlg.ShowModal()
+        dlg.Destroy()
+
+        self.entered_name = dlg.GetValue()
+
+        if result == wx.ID_OK:
+            username = dlg.GetValue()
+
+            msg = clientProtocol.pack_send_email_request(username)
+            self.comm.send(msg)
+
+    def _email_ok(self, email):
+        code_dlg = wx.TextEntryDialog(self, "Enter the 6-digit code sent to your mail:", "Verify", "")
+        result = code_dlg.ShowModal()
+        code_dlg.Destroy()
+
+        if result == wx.ID_OK:
+            code = code_dlg.GetValue()
+
+            msg = clientProtocol.pack_check_code_request(email, code)
+            self.comm.send(msg)
+
+    def _send_forgot_password_request(self):
+        dlg = ForgotPasswordDialog(self, "Enter new password")
+        result = dlg.ShowModal()
+
+        if result == wx.ID_OK:
+            values = dlg.GetValues()
+
+            msg = clientProtocol.pack_forgot_password_request(self.entered_name, *values)
+            self.comm.send(msg)
+
+        dlg.Destroy()
