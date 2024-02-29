@@ -1,33 +1,30 @@
 import wx
 
-class Panel1(wx.Panel):
-    """class Panel1 creates a panel with an image on it, inherits wx.Panel"""
-    def __init__(self, parent, id):
-        # create the panel
-        wx.Panel.__init__(self, parent, id)
-        try:
-            # pick an image file you have in the working folder
-            # you can load .jpg  .png  .bmp  or .gif files
-            image_file = r"D:\!ReefGold\Project_code_start\UserGraphics\bg.png"
-            bmp1 = wx.Image(image_file, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-            # image's upper left corner anchors at panel coordinates (0, 0)
-            self.bitmap1 = wx.StaticBitmap(self, -1, bmp1, (0, 0))
-            # show some image details
-            str1 = "%s  %dx%d" % (image_file, bmp1.GetWidth(), bmp1.GetHeight())
-            parent.SetTitle(str1)
-        except IOError:
-            raise SystemExit
 
-        # button goes on the image --> self.bitmap1 is the parent
-        self.button1 = wx.Button(self.bitmap1, id=-1, label='Button1', pos=(607, 124))
-        self.text = wx.StaticText(self.bitmap1, 0, "reef")
-        self.text.SetTransparent(0)
+class MyFrame(wx.Frame):
+    def __init__(self, *args, **kwds):
+        super(MyFrame, self).__init__(*args, **kwds)
 
-app = wx.App()
-# create a window/frame, no parent, -1 is default ID
-# change the size of the frame to fit the backgound images
-frame1 = wx.Frame(None, -1, "An image on a panel", size=(1920, 1080))
-# create the class instance
-panel1 = Panel1(frame1, -1)
-frame1.Show(True)
-app.MainLoop()
+        panel = wx.Panel(self)
+
+        # Load a sample bitmap for the button (replace with your own)
+        bitmap = wx.Bitmap(r"D:\!ReefGold\Project_code_start\UserGraphics\Shared.png", wx.BITMAP_TYPE_PNG)
+
+        # Create a BitmapButton with the loaded bitmap
+        bitmap_button = wx.BitmapButton(panel, wx.ID_ANY, bitmap, style=wx.NO_BORDER)
+
+        # Set the tooltip for the BitmapButton
+        tooltip = wx.ToolTip("This is a BitmapButton")
+        bitmap_button.SetToolTip(tooltip)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(bitmap_button, 0, wx.ALL, 10)
+
+        panel.SetSizer(sizer)
+
+
+if __name__ == "__main__":
+    app = wx.App(False)
+    frame = MyFrame(None, wx.ID_ANY, "wxPython BitmapButton Example", size=(300, 150))
+    frame.Show()
+    app.MainLoop()

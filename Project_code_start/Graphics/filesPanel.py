@@ -73,10 +73,16 @@ class FilesPanel(wx.Panel):
 
         self.icons_and_files_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.icons_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.settings_img = wx.StaticBitmap(self, -1, wx.Bitmap(
-            f"{Settings.USER_FILES_PATH}/Settings.png", wx.BITMAP_TYPE_ANY))
-        self.shared_files_img = wx.StaticBitmap(self, -1, wx.Bitmap(
-            f"{Settings.USER_FILES_PATH}/Shared.png", wx.BITMAP_TYPE_ANY))
+
+        self.settings_img = wx.BitmapButton(self, wx.ID_ANY, wx.Bitmap(f"{Settings.USER_FILES_PATH}/Settings.png",
+                                            wx.BITMAP_TYPE_ANY))
+        tooltip = wx.ToolTip("Settings")
+        self.settings_img.SetToolTip(tooltip)
+
+        self.shared_files_img = wx.BitmapButton(self, wx.ID_ANY, wx.Bitmap(f"{Settings.USER_FILES_PATH}/Shared.png",
+                                                wx.BITMAP_TYPE_ANY))
+        tooltip = wx.ToolTip("Shared files")
+        self.shared_files_img.SetToolTip(tooltip)
 
         self.shared_files_img.Bind(wx.EVT_LEFT_DOWN, self.show_shared_files)
         self.settings_img.Bind(wx.EVT_LEFT_DOWN, self.show_settings)

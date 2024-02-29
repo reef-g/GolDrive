@@ -12,10 +12,10 @@ class LoginPanel(wx.Panel):
         self.comm = comm
         self.parent = parent
 
-        image_file = r"D:\!ReefGold\Project_code_start\UserGraphics\bg.png"
-        bmp1 = wx.Image(image_file, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-        # image's upper left corner anchors at panel coordinates (0, 0)
-        self.bg = wx.StaticBitmap(self, -1, bmp1, (0, 0))
+        # image_file = r"D:\!ReefGold\Project_code_start\UserGraphics\bg.png"
+        # bmp1 = wx.Image(image_file, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        # # image's upper left corner anchors at panel coordinates (0, 0)
+        # self.bg = wx.StaticBitmap(self, -1, bmp1, (0, 0))
 
         self.username_input = None
 
@@ -36,14 +36,14 @@ class LoginPanel(wx.Panel):
         forgot_password_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         self.sizer.AddSpacer(290)
-        title = TransparentText(self.bg, -1, label="LOG IN", style=wx.TRANSPARENT_WINDOW)
+        title = TransparentText(self, -1, label="LOG IN", style=wx.TRANSPARENT_WINDOW)
         title.SetForegroundColour(wx.BLACK)
         title.SetFont(title_font)
 
         name_sizer = wx.BoxSizer(wx.VERTICAL)
-        name_text = TransparentText(self.bg, 1, label="Username: ", style=wx.TRANSPARENT_WINDOW)
+        name_text = TransparentText(self, 1, label="Username: ", style=wx.TRANSPARENT_WINDOW)
         name_text.SetFont(text_font)
-        self.nameField = wx.TextCtrl(self.bg, -1, name="username", size=(650, 40))
+        self.nameField = wx.TextCtrl(self, -1, name="username", size=(650, 40))
         self.nameField.SetFont(self.entry_font)
 
         name_sizer.Add(name_text, 0, wx.Center, 5)
@@ -51,15 +51,17 @@ class LoginPanel(wx.Panel):
         name_sizer.AddSpacer(15)
 
         self.pass_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        pass_text = TransparentText(self.bg, 1, label="Password: ", style=wx.TRANSPARENT_WINDOW)
+        pass_text = TransparentText(self, 1, label="Password: ", style=wx.TRANSPARENT_WINDOW)
         pass_text.SetFont(text_font)
-        self.passField = wx.TextCtrl(self.bg, -1, name="password", size=(650, 40), style=wx.TE_PASSWORD)
+        self.passField = wx.TextCtrl(self, -1, name="password", size=(650, 40),
+                                     style=wx.TE_PASSWORD | wx.TE_PROCESS_ENTER)
+        self.passField.Bind(wx.EVT_TEXT_ENTER, self.on_ok)
         self.passField.SetFont(self.entry_font)
 
         name_sizer.Add(pass_text)
         self.pass_sizer.AddSpacer(27)
         self.pass_sizer.Add(self.passField)
-        self.eye_bitmap = wx.StaticBitmap(self.bg, wx.ID_ANY, self.hidden_bitmap)
+        self.eye_bitmap = wx.StaticBitmap(self, wx.ID_ANY, self.hidden_bitmap)
         self.eye_bitmap.Bind(wx.EVT_LEFT_DOWN, self.change_visibility)
         self.pass_sizer.Add(self.eye_bitmap)
 
@@ -67,7 +69,7 @@ class LoginPanel(wx.Panel):
         entries.Add(self.pass_sizer, 0, wx.CENTER, 10)
 
         forgot_password_sizer.AddSpacer(28)
-        self.forgot_password = TransparentText(self.bg, -1, "Forgot password", style=wx.TRANSPARENT_WINDOW)
+        self.forgot_password = TransparentText(self, -1, "Forgot password", style=wx.TRANSPARENT_WINDOW)
         self.forgot_password.SetFont(forgot_password_font)
         self.forgot_password.SetForegroundColour("#6787a4")
         self.forgot_password.Bind(wx.EVT_LEFT_DOWN, self._get_user_forgot_password)
@@ -75,11 +77,13 @@ class LoginPanel(wx.Panel):
         entries.Add(forgot_password_sizer)
 
         button_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        login_button = wx.Button(self.bg, label="LOG IN", size=(90, 40))
+        login_button = wx.Button(self, label="LOG IN", size=(90, 40))
         login_button.Bind(wx.EVT_BUTTON, self.on_ok)
 
-        register_button = wx.Button(self.bg, label="REGISTER", size=(90, 40))
+        register_button = wx.Button(self, label="REGISTER", size=(90, 40))
         register_button.Bind(wx.EVT_BUTTON, self.register_control)
+
+        # self.SetTabOrder([self.nameField, self.passField, login_button, register_button])
 
         button_sizer.Add(login_button, 0, wx.CENTER, 10)
         button_sizer.AddSpacer(80)
@@ -100,7 +104,24 @@ class LoginPanel(wx.Panel):
         self.SetSizer(self.sizer)
         self.Layout()
 
+        self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
+
         self.Hide()
+
+    def OnEraseBackground(self, evt):
+        """
+        Add a picture to the background
+        """
+        # yanked from ColourDB.py
+        dc = evt.GetDC()
+
+        if not dc:
+            dc = wx.ClientDC(self)
+            rect = self.GetUpdateRegion().GetBox()
+            dc.SetClippingRect(rect)
+        dc.Clear()
+        bmp = wx.Bitmap(r"D:\!ReefGold\Project_code_start\UserGraphics\bg.png")
+        dc.DrawBitmap(bmp, 0, 0)
 
     def change_visibility(self, event):
         open_or_closed = self.hidden_bitmap if not self.is_showing_password else self.shown_bitmap
@@ -110,7 +131,7 @@ class LoginPanel(wx.Panel):
 
         # Create a new text control with the updated style
         new_style = wx.TE_PASSWORD if not self.is_showing_password else wx.TE_PROCESS_ENTER
-        new_textctrl = wx.TextCtrl(self.bg, pos=position, size=size, style=new_style)
+        new_textctrl = wx.TextCtrl(self, pos=position, size=size, style=new_style | wx.TE_PROCESS_ENTER)
         new_textctrl.SetFont(self.entry_font)
 
         # Copy the text from the existing text control to the new one
@@ -120,6 +141,7 @@ class LoginPanel(wx.Panel):
         self.pass_sizer.Replace(self.passField, new_textctrl)
         self.passField.Destroy()
         self.passField = new_textctrl
+        self.passField.Bind(wx.EVT_TEXT_ENTER, self.on_ok)
 
         self.is_showing_password = not self.is_showing_password
 

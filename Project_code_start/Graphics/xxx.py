@@ -35,6 +35,7 @@ def make_circle_profile(profile_picture_path):
     # Create same size alpha layer with circle
     alpha = Image.new('L', imgae.size, 0)
     draw = ImageDraw.Draw(alpha)
+    #draw.pieslice([0, 0, height, weight], 0, 360, fill=255)
     draw.pieslice([0, 0, height, weight], 0, 360, fill=255)
     # Convert alpha Image to numpy array
     npAlpha = np.array(alpha)
@@ -47,7 +48,8 @@ def resize_profile(profile_picture_path):
     """
         Resize profile picture
     """
-    size = 138, 137
+    #size = 138, 137
+    size = 100, 200
     # Open picture
     im = Image.open(profile_picture_path).convert("RGB")
     # Change the size and saved it
@@ -119,7 +121,7 @@ class Frame(wx.Frame):
         m_close.Bind(wx.EVT_BUTTON, self.OnClose)
         box.Add(m_close, 0, wx.ALL, 10)
 
-        profile_picture = r"T:\public\reefcheck\yoav.png"
+        profile_picture = r"D:\!ReefGold\Project_code_start\Graphics\pro_bg.png"
 
         try:
         # Open the new picture and calculate the position
@@ -135,9 +137,13 @@ class Frame(wx.Frame):
 
         #review the profile picture
         image = wx.Bitmap(f"{profile_picture}", wx.BITMAP_TYPE_PNG)
-        profile_button = wx.BitmapButton(self, 1, image, name="Profile", pos=(400, y), style=wx.NO_BORDER)
-        profile_button.SetBackgroundColour(wx.BLUE)
+        im = wx.ImageFromBitmap(image)
+        im.Scale(150, 150, wx.IMAGE_QUALITY_HIGH)
+        image = wx.Bitmap(im)
 
+        profile_button = wx.BitmapButton(self, 1, image, name="Profile", pos=(400, y), style=wx.NO_BORDER)
+
+        profile_button.SetBackgroundColour(wx.WHITE)
 
         panel.SetSizer(box)
         panel.Layout()
@@ -169,7 +175,7 @@ class Frame(wx.Frame):
 
 
 
-set_profile_picture("yoav.png")
+set_profile_picture("bg.png")
 app = wx.App(redirect=True)  # Error messages go to popup window
 top = Frame("profile Test")
 top.Show()
