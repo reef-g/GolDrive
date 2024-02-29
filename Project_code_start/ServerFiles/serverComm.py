@@ -187,7 +187,7 @@ class ServerComm:
                 if not os.path.isfile(f"{Settings.USER_PROFILE_PHOTOS}/{username}.png"):
                     username = 'd'
 
-                path_to_read = f"{Settings.USER_FILES_PATH}/{path}" if opcode != "21" and opcode != "04" else \
+                path_to_read = f"{Settings.SERVER_FILES_PATH}/{path}" if opcode != "21" and opcode != "04" else \
                     f"{Settings.USER_PROFILE_PHOTOS}/{username}.png"
 
                 try:

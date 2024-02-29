@@ -46,7 +46,7 @@ def pack_files_message(username):
     """
     files_of_user = "03"
     # the path to work at, will later to change to the person directory
-    path = f"{Settings.USER_FILES_PATH}/{username}"
+    path = f"{Settings.SERVER_FILES_PATH}/{username}"
 
     for (dirname, dirs, files) in os.walk(path):
         # removing the path so that it's only the directories in the system and not from the server

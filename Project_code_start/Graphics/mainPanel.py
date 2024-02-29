@@ -26,7 +26,6 @@ class MainPanel(wx.Panel):
         self.frame = parent
         self.comm = comm
         self.files_comm = None
-        self.SetBackgroundColour(wx.LIGHT_GREY)
         self.username = None
         self.email = None
         self.profilePhoto = None

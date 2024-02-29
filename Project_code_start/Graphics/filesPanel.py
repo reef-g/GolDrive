@@ -74,9 +74,9 @@ class FilesPanel(wx.Panel):
         self.icons_and_files_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.icons_sizer = wx.BoxSizer(wx.VERTICAL)
         self.settings_img = wx.StaticBitmap(self, -1, wx.Bitmap(
-            f"{Settings.USER_IMAGES_PATH}/Settings.png", wx.BITMAP_TYPE_ANY))
+            f"{Settings.USER_FILES_PATH}/Settings.png", wx.BITMAP_TYPE_ANY))
         self.shared_files_img = wx.StaticBitmap(self, -1, wx.Bitmap(
-            f"{Settings.USER_IMAGES_PATH}/Shared.png", wx.BITMAP_TYPE_ANY))
+            f"{Settings.USER_FILES_PATH}/Shared.png", wx.BITMAP_TYPE_ANY))
 
         self.shared_files_img.Bind(wx.EVT_LEFT_DOWN, self.show_shared_files)
         self.settings_img.Bind(wx.EVT_LEFT_DOWN, self.show_settings)
@@ -242,8 +242,8 @@ class FilesPanel(wx.Panel):
 
         self.grid_sizer = wx.GridSizer(cols=15, hgap=10, vgap=10)
 
-        image_paths = [f"{Settings.USER_IMAGES_PATH}/dirs_image.png",
-                       f"{Settings.USER_IMAGES_PATH}/files_image.png"]
+        image_paths = [f"{Settings.USER_FILES_PATH}/dirs_image.png",
+                       f"{Settings.USER_FILES_PATH}/files_image.png"]
 
         # Add items with corresponding images to the grid sizer
         while dirs or files:

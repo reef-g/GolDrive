@@ -96,9 +96,9 @@ def _handle_email_register(main_server, db, client_ip, code_dic, username, passw
     main_server.send(client_ip, msg)
 
     if ans == 0:
-        if not os.path.isdir(f"{Settings.USER_FILES_PATH}/{username}"):
-            os.mkdir(f"{Settings.USER_FILES_PATH}/{username}")
-            os.mkdir(f"{Settings.USER_FILES_PATH}/{username}/@#$SHAREDFILES$#@")
+        if not os.path.isdir(f"{Settings.SERVER_FILES_PATH}/{username}"):
+            os.mkdir(f"{Settings.SERVER_FILES_PATH}/{username}")
+            os.mkdir(f"{Settings.SERVER_FILES_PATH}/{username}/@#$SHAREDFILES$#@")
 
 
 def _handle_login(main_server, db, client_ip, ip_by_users, code_dic, username, password):
@@ -187,7 +187,7 @@ def _handle_delete_file(main_server, db, client_ip, path):
     :return: deletes the file and return the message by the protocol
     """
 
-    status = sFileHandler.delete_file(f"{Settings.USER_FILES_PATH}/{path}")
+    status = sFileHandler.delete_file(f"{Settings.SERVER_FILES_PATH}/{path}")
     msg = serverProtocol.pack_delete_response(status)
     main_server.send(client_ip, msg)
 
@@ -202,7 +202,7 @@ def _handle_rename_file(main_server, db, client_ip, path, new_name):
     :return: renames the file and return the message by the protocol
     """
 
-    status = sFileHandler.rename_file(f"{Settings.USER_FILES_PATH}/{path}", new_name)
+    status = sFileHandler.rename_file(f"{Settings.SERVER_FILES_PATH}/{path}", new_name)
     msg = serverProtocol.pack_rename_file_response(status, new_name)
     main_server.send(client_ip, msg)
 
@@ -239,7 +239,7 @@ def _handle_upload_file(main_server, client_ip, path, data):
     """
     status = 0
     try:
-        with open(f"{Settings.USER_FILES_PATH}/{path}", 'wb' if type(data) == bytes else 'w') as f:
+        with open(f"{Settings.SERVER_FILES_PATH}/{path}", 'wb' if type(data) == bytes else 'w') as f:
             f.write(data)
     except Exception as e:
         print(str(e))
@@ -252,7 +252,7 @@ def _handle_upload_file(main_server, client_ip, path, data):
 def _handle_create_dir(main_server, db, client_ip, path):
     status = 0
     try:
-        os.mkdir(f"{Settings.USER_FILES_PATH}/{path}")
+        os.mkdir(f"{Settings.SERVER_FILES_PATH}/{path}")
     except Exception as e:
         print(str(e))
         status = 1
@@ -263,7 +263,7 @@ def _handle_create_dir(main_server, db, client_ip, path):
 def _handle_share_file(main_server, db, client_ip, ip_by_users, path, username):
     status = 0
     user_who_shared = path.split('/')[0]
-    path_to_add = f"{Settings.USER_FILES_PATH}/{username}/@#$SHAREDFILES$#@/{user_who_shared}"
+    path_to_add = f"{Settings.SERVER_FILES_PATH}/{username}/@#$SHAREDFILES$#@/{user_who_shared}"
 
     if db.username_exist(username):
         if not os.path.isdir(path_to_add):
@@ -273,8 +273,8 @@ def _handle_share_file(main_server, db, client_ip, ip_by_users, path, username):
                 print(str(e))
 
         try:
-            shutil.copy(f"{Settings.USER_FILES_PATH}/{path}",
-                        f"{Settings.USER_FILES_PATH}/{username}/@#$SHAREDFILES$#@/"
+            shutil.copy(f"{Settings.SERVER_FILES_PATH}/{path}",
+                        f"{Settings.SERVER_FILES_PATH}/{username}/@#$SHAREDFILES$#@/"
                         f"{user_who_shared}")
         except Exception as e:
             print(str(e))
@@ -294,7 +294,7 @@ def _handle_share_file(main_server, db, client_ip, ip_by_users, path, username):
 def _handle_move_file(main_server, db, client_ip, src, dst):
     status = 0
     try:
-        shutil.move(f"{Settings.USER_FILES_PATH}/{src}", f"{Settings.USER_FILES_PATH}/{dst}")
+        shutil.move(f"{Settings.SERVER_FILES_PATH}/{src}", f"{Settings.SERVER_FILES_PATH}/{dst}")
     except Exception as e:
         print(str(e))
         status = 1
@@ -306,7 +306,7 @@ def _handle_move_file(main_server, db, client_ip, src, dst):
 def _handle_paste_file(main_server, db, client_ip, src, dst):
     status = 0
     try:
-        shutil.copy(f"{Settings.USER_FILES_PATH}/{src}", f"{Settings.USER_FILES_PATH}/{dst}")
+        shutil.copy(f"{Settings.SERVER_FILES_PATH}/{src}", f"{Settings.SERVER_FILES_PATH}/{dst}")
     except Exception as e:
         print(str(e))
         status = 1

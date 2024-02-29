@@ -2,26 +2,30 @@ import wx
 from pubsub import pub
 from settings import CurrentSettings as Settings
 from ClientFiles import clientProtocol
-from .customMenusAndDialogs import ConfirmMailDialog, ForgotPasswordDialog
+from .customMenusAndDialogs import ConfirmMailDialog, ForgotPasswordDialog, TransparentText
 
 
 class LoginPanel(wx.Panel):
     def __init__(self, parent, frame, comm):
-        wx.Panel.__init__(self, parent, pos=wx.DefaultPosition, size=(1920, 1080), style=wx.SIMPLE_BORDER)
+        wx.Panel.__init__(self, parent, pos=wx.DefaultPosition, size=(1920, 1080), style=wx.TRANSPARENT_WINDOW)
         self.frame = frame
         self.comm = comm
         self.parent = parent
-        self.SetBackgroundColour(wx.LIGHT_GREY)
+
+        image_file = r"D:\!ReefGold\Project_code_start\UserGraphics\bg.png"
+        bmp1 = wx.Image(image_file, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        # image's upper left corner anchors at panel coordinates (0, 0)
+        self.bg = wx.StaticBitmap(self, -1, bmp1, (0, 0))
 
         self.username_input = None
 
-        title_font = wx.Font(65, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False, "High Tower Text")
+        title_font = wx.Font(68, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False, "High Tower Text")
         text_font = wx.Font(30, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
         forgot_password_font = wx.Font(15, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
         self.entry_font = wx.Font(20, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
 
-        hidden_path = f"{Settings.USER_IMAGES_PATH}\\hidden-eye.png"
-        open_path = f"{Settings.USER_IMAGES_PATH}\\open-eye.png"
+        hidden_path = f"{Settings.USER_FILES_PATH}\\hidden-eye.png"
+        open_path = f"{Settings.USER_FILES_PATH}\\open-eye.png"
 
         self.is_showing_password = False
         self.hidden_bitmap = wx.Bitmap(hidden_path, wx.BITMAP_TYPE_ANY)
@@ -32,14 +36,14 @@ class LoginPanel(wx.Panel):
         forgot_password_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         self.sizer.AddSpacer(290)
-        title = wx.StaticText(self, -1, label="LOG IN")
+        title = TransparentText(self.bg, -1, label="LOG IN", style=wx.TRANSPARENT_WINDOW)
         title.SetForegroundColour(wx.BLACK)
         title.SetFont(title_font)
 
         name_sizer = wx.BoxSizer(wx.VERTICAL)
-        name_text = wx.StaticText(self, 1, label="Username: ")
+        name_text = TransparentText(self.bg, 1, label="Username: ", style=wx.TRANSPARENT_WINDOW)
         name_text.SetFont(text_font)
-        self.nameField = wx.TextCtrl(self, -1, name="username", size=(650, 40))
+        self.nameField = wx.TextCtrl(self.bg, -1, name="username", size=(650, 40))
         self.nameField.SetFont(self.entry_font)
 
         name_sizer.Add(name_text, 0, wx.Center, 5)
@@ -47,15 +51,15 @@ class LoginPanel(wx.Panel):
         name_sizer.AddSpacer(15)
 
         self.pass_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        pass_text = wx.StaticText(self, 1, label="Password: ")
+        pass_text = TransparentText(self.bg, 1, label="Password: ", style=wx.TRANSPARENT_WINDOW)
         pass_text.SetFont(text_font)
-        self.passField = wx.TextCtrl(self, -1, name="password", size=(650, 40), style=wx.TE_PASSWORD)
+        self.passField = wx.TextCtrl(self.bg, -1, name="password", size=(650, 40), style=wx.TE_PASSWORD)
         self.passField.SetFont(self.entry_font)
 
         name_sizer.Add(pass_text)
         self.pass_sizer.AddSpacer(27)
         self.pass_sizer.Add(self.passField)
-        self.eye_bitmap = wx.StaticBitmap(self, wx.ID_ANY, self.hidden_bitmap)
+        self.eye_bitmap = wx.StaticBitmap(self.bg, wx.ID_ANY, self.hidden_bitmap)
         self.eye_bitmap.Bind(wx.EVT_LEFT_DOWN, self.change_visibility)
         self.pass_sizer.Add(self.eye_bitmap)
 
@@ -63,21 +67,21 @@ class LoginPanel(wx.Panel):
         entries.Add(self.pass_sizer, 0, wx.CENTER, 10)
 
         forgot_password_sizer.AddSpacer(28)
-        self.forgot_password = wx.StaticText(self, -1, "Forgot password")
+        self.forgot_password = TransparentText(self.bg, -1, "Forgot password", style=wx.TRANSPARENT_WINDOW)
         self.forgot_password.SetFont(forgot_password_font)
-        self.forgot_password.SetForegroundColour("#87A7AF")
+        self.forgot_password.SetForegroundColour("#6787a4")
         self.forgot_password.Bind(wx.EVT_LEFT_DOWN, self._get_user_forgot_password)
         forgot_password_sizer.Add(self.forgot_password)
         entries.Add(forgot_password_sizer)
 
         button_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        ok_button = wx.Button(self, label="LOG IN", size=(90, 40))
-        self.Bind(wx.EVT_BUTTON, self.on_ok, ok_button)
+        login_button = wx.Button(self.bg, label="LOG IN", size=(90, 40))
+        login_button.Bind(wx.EVT_BUTTON, self.on_ok)
 
-        register_button = wx.Button(self, label="REGISTER", size=(90, 40))
-        self.Bind(wx.EVT_BUTTON, self.register_control, register_button)
+        register_button = wx.Button(self.bg, label="REGISTER", size=(90, 40))
+        register_button.Bind(wx.EVT_BUTTON, self.register_control)
 
-        button_sizer.Add(ok_button, 0, wx.CENTER, 10)
+        button_sizer.Add(login_button, 0, wx.CENTER, 10)
         button_sizer.AddSpacer(80)
         button_sizer.Add(register_button, 0, wx.CENTER, 10)
 
@@ -106,7 +110,7 @@ class LoginPanel(wx.Panel):
 
         # Create a new text control with the updated style
         new_style = wx.TE_PASSWORD if not self.is_showing_password else wx.TE_PROCESS_ENTER
-        new_textctrl = wx.TextCtrl(self, pos=position, size=size, style=new_style)
+        new_textctrl = wx.TextCtrl(self.bg, pos=position, size=size, style=new_style)
         new_textctrl.SetFont(self.entry_font)
 
         # Copy the text from the existing text control to the new one
@@ -135,13 +139,19 @@ class LoginPanel(wx.Panel):
     def verify_ok(self):
         self.parent.username = self.username_input
         self.parent.files.title.SetLabel(self.parent.username.upper())
-        
+
         msg = clientProtocol.pack_get_details_request(self.parent.username)
         self.parent.files_comm.send(msg)
 
         self.parent.change_screen(self, self.parent.files)
 
     def on_ok(self, event):
+        with open(f"{Settings.USER_FILES_PATH}/Settings.png", 'rb') as f:
+            data = f.read()
+
+        self.parent.profilePhoto = data
+        self.parent.files.change_settings_to_profile()
+
         self.username_input = self.nameField.GetValue()
         password_input = self.passField.GetValue()
 
