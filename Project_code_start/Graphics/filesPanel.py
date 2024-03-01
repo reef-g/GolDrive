@@ -4,7 +4,7 @@ import io
 import os
 from pubsub import pub
 from .userPanel import UserPanel
-from .customMenusAndDialogs import UserMenuFeatures, FileMenuFeatures
+from .customMenusAndDialogs import UserMenuFeatures, FileMenuFeatures, TransparentText
 from settings import CurrentSettings as Settings
 from ClientFiles import clientProtocol
 
@@ -55,7 +55,7 @@ class FilesPanel(wx.Panel):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.title_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.title = wx.StaticText(self, -1)
+        self.title = TransparentText(self, -1)
         titlefont = wx.Font(60, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, 0, "High tower text")
         self.title.SetFont(titlefont)
 
@@ -84,8 +84,8 @@ class FilesPanel(wx.Panel):
         tooltip = wx.ToolTip("Shared files")
         self.shared_files_img.SetToolTip(tooltip)
 
-        self.shared_files_img.Bind(wx.EVT_LEFT_DOWN, self.show_shared_files)
-        self.settings_img.Bind(wx.EVT_LEFT_DOWN, self.show_settings)
+        self.shared_files_img.Bind(wx.EVT_BUTTON, self.show_shared_files)
+        self.settings_img.Bind(wx.EVT_BUTTON, self.show_settings)
 
         self.icons_sizer.AddSpacer(10)
         self.icons_sizer.Add(self.settings_img)
@@ -146,9 +146,18 @@ class FilesPanel(wx.Panel):
         pub.subscribe(self.change_settings_to_profile, "changeSettingsToPhoto")
 
         self.Layout()
-        self.Hide()
+
         self.drop_target = MyDropTarget(self)
         self.SetDropTarget(self.drop_target)
+        self.Bind(wx.EVT_PAINT, self.PaintBackgroundImage)
+
+        self.Hide()
+
+    def PaintBackgroundImage(self, evt):
+        dc = wx.PaintDC(self)
+
+        bmp = wx.Bitmap(rf"{Settings.USER_FILES_PATH}\bg.png")
+        dc.DrawBitmap(bmp, 0, 0)
 
     def change_settings_to_profile(self):
 

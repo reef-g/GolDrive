@@ -1,30 +1,51 @@
 import wx
 
 
+class CircularBitmapButton(wx.Panel):
+    def __init__(self, parent, bitmap, size=(50, 50)):
+        super(CircularBitmapButton, self).__init__(parent, size=size)
+        self.SetBackgroundColour(wx.WHITE)  # Set background color to white
+
+        # Load bitmap
+        self.bitmap = wx.Bitmap(bitmap)
+
+        self.Bind(wx.EVT_PAINT, self.on_paint)
+        self.Bind(wx.EVT_LEFT_DOWN, self.on_button_click)
+
+    def on_paint(self, event):
+        dc = wx.AutoBufferedPaintDC(self)
+        dc.Clear()
+        dc.DrawBitmap(self.bitmap, 0, 0, True)
+
+        # Get the circular region
+        region = wx.Region(self.GetSize(), self.GetSize())
+        region.Offset(self.GetPosition())
+        dc.SetClippingRegionAsRegion(region)
+
+    def on_button_click(self, event):
+        print("Button Clicked!")
+
+
 class MyFrame(wx.Frame):
-    def __init__(self, *args, **kwds):
-        super(MyFrame, self).__init__(*args, **kwds)
+    def __init__(self, parent, title):
+        super(MyFrame, self).__init__(parent, title=title, size=(300, 200))
 
         panel = wx.Panel(self)
 
-        # Load a sample bitmap for the button (replace with your own)
-        bitmap = wx.Bitmap(r"D:\!ReefGold\Project_code_start\UserGraphics\Shared.png", wx.BITMAP_TYPE_PNG)
+        # Load a circular image (replace 'your_circular_image.png' with your image file)
+        circular_image_path = r"C:\Users\reefg\OneDrive\Desktop\test.png"
 
-        # Create a BitmapButton with the loaded bitmap
-        bitmap_button = wx.BitmapButton(panel, wx.ID_ANY, bitmap, style=wx.NO_BORDER)
-
-        # Set the tooltip for the BitmapButton
-        tooltip = wx.ToolTip("This is a BitmapButton")
-        bitmap_button.SetToolTip(tooltip)
+        circular_button = CircularBitmapButton(panel, bitmap=circular_image_path, size=(60, 60))
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(bitmap_button, 0, wx.ALL, 10)
+        sizer.Add(circular_button, 0, wx.ALL, 10)
+        panel.SetSizerAndFit(sizer)
 
-        panel.SetSizer(sizer)
+        self.Centre()
+        self.Show(True)
 
 
-if __name__ == "__main__":
-    app = wx.App(False)
-    frame = MyFrame(None, wx.ID_ANY, "wxPython BitmapButton Example", size=(300, 150))
-    frame.Show()
-    app.MainLoop()
+app = wx.App(False)
+frame = MyFrame(None, "Circular BitmapButton Example")
+app.MainLoop()
+

@@ -2,7 +2,8 @@ import wx
 from pubsub import pub
 import io
 from ClientFiles import clientProtocol
-from .customMenusAndDialogs import ChangePasswordDialog, ProfileSettingsMenu
+from .customMenusAndDialogs import ChangePasswordDialog, ProfileSettingsMenu, TransparentText
+from settings import CurrentSettings as Settings
 
 
 class UserPanel(wx.Panel):
@@ -19,7 +20,7 @@ class UserPanel(wx.Panel):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.AddSpacer(2)
 
-        self.title = wx.StaticText(self, -1, label="SETTINGS")
+        self.title = TransparentText(self, -1, label="SETTINGS")
         font = wx.Font(65, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, 0, "High tower text")
         self.title.SetFont(font)
         self.sizer.Add(self.title, 0, wx.CENTER)
@@ -38,8 +39,8 @@ class UserPanel(wx.Panel):
         self.imageSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.userAndImageSizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.usernameTitle = wx.StaticText(self, -1, label=f"Username: {self.parent.username}")
-        self.emailTitle = wx.StaticText(self, -1, label=f"Email: {self.parent.email}")
+        self.usernameTitle = TransparentText(self, -1, label=f"Username: {self.parent.username}")
+        self.emailTitle = TransparentText(self, -1, label=f"Email: {self.parent.email}")
         title_font = wx.Font(45, wx.DECORATIVE, wx.NORMAL, wx.NORMAL)
         self.usernameTitle.SetFont(title_font)
         self.emailTitle.SetFont(title_font)
@@ -99,7 +100,15 @@ class UserPanel(wx.Panel):
         pub.subscribe(self._change_email, "changeEmailOk")
         pub.subscribe(self._change_photo, "changePhotoOk")
 
+        self.Bind(wx.EVT_PAINT, self.PaintBackgroundImage)
+
         self.Hide()
+
+    def PaintBackgroundImage(self, evt):
+        dc = wx.PaintDC(self)
+
+        bmp = wx.Bitmap(rf"{Settings.USER_FILES_PATH}\bg.png")
+        dc.DrawBitmap(bmp, 0, 0)
 
     def login_control(self, event):
         self.parent.change_screen(self, self.parent.login)

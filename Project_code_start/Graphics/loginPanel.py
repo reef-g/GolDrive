@@ -12,11 +12,6 @@ class LoginPanel(wx.Panel):
         self.comm = comm
         self.parent = parent
 
-        # image_file = r"D:\!ReefGold\Project_code_start\UserGraphics\bg.png"
-        # bmp1 = wx.Image(image_file, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-        # # image's upper left corner anchors at panel coordinates (0, 0)
-        # self.bg = wx.StaticBitmap(self, -1, bmp1, (0, 0))
-
         self.username_input = None
 
         title_font = wx.Font(68, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False, "High Tower Text")
@@ -104,23 +99,14 @@ class LoginPanel(wx.Panel):
         self.SetSizer(self.sizer)
         self.Layout()
 
-        self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
+        self.Bind(wx.EVT_PAINT, self.PaintBackgroundImage)
 
         self.Hide()
 
-    def OnEraseBackground(self, evt):
-        """
-        Add a picture to the background
-        """
-        # yanked from ColourDB.py
-        dc = evt.GetDC()
+    def PaintBackgroundImage(self, evt):
+        dc = wx.PaintDC(self)
 
-        if not dc:
-            dc = wx.ClientDC(self)
-            rect = self.GetUpdateRegion().GetBox()
-            dc.SetClippingRect(rect)
-        dc.Clear()
-        bmp = wx.Bitmap(r"D:\!ReefGold\Project_code_start\UserGraphics\bg.png")
+        bmp = wx.Bitmap(rf"{Settings.USER_FILES_PATH}\bg.png")
         dc.DrawBitmap(bmp, 0, 0)
 
     def change_visibility(self, event):
