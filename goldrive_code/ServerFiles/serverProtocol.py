@@ -234,8 +234,9 @@ def pack_forgot_password_response(status):
     return f"26{str(len(str(status))).zfill(2)}{status}"
 
 
-def pack_zip_file_response(status):
-    return f"27{str(len(str(status))).zfill(2)}{status}"
+def pack_zip_folder_response(status, zipped_folder_name):
+    return f"27{str(len(str(status))).zfill(2)}{status}{str(len(str(zipped_folder_name))).zfill(2)}{zipped_folder_name}"
+
 
 if __name__ == '__main__':
     code, data_from_message = unpack_message("1210reef/reef1000012")

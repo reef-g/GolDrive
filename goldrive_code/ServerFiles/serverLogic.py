@@ -40,7 +40,7 @@ def _handle_messages(main_server, msg_q):
                      "09": _handle_share_file, "10": _handle_delete_file, "13": _handle_create_dir,
                      "17": _handle_send_email, "18": _handle_move_file, "19": _handle_paste_file,
                      "23": _handle_email_login, "24": _handle_email_register, "25": _handle_check_email,
-                     "26": _handle_forgot_password}
+                     "26": _handle_forgot_password, "27": _handle_zip_folder}
 
     while True:
         ip, data = msg_q.get()
@@ -442,6 +442,12 @@ def _handle_forgot_password(main_server, db, client_ip, username, password, conf
         status = db.change_password(username, encryption.hash_msg(password))
 
     msg = serverProtocol.pack_forgot_password_response(status)
+    main_server.send(client_ip, msg)
+
+
+def _handle_zip_folder(main_server, db, client_ip, folder_path):
+    status, folder_name = sFileHandler.create_zip(f"{Settings.SERVER_FILES_PATH}/{folder_path}")
+    msg = serverProtocol.pack_zip_folder_response(status, folder_name)
     main_server.send(client_ip, msg)
 
 

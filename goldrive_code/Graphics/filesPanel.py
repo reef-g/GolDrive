@@ -151,6 +151,7 @@ class FilesPanel(wx.Panel):
         pub.subscribe(self._show_progress_bar, "startBar")
         pub.subscribe(self._change_progress_bar, "changeProgress")
         pub.subscribe(self.change_settings_to_profile, "changeSettingsToPhoto")
+        pub.subscribe(self._upload_object, "zipFileOk")
 
         self.Layout()
 
@@ -264,19 +265,38 @@ class FilesPanel(wx.Panel):
 
         self.grid_sizer = wx.GridSizer(cols=15, hgap=10, vgap=10)
 
-        image_paths = [f"{Settings.USER_FILES_PATH}/dirs_image.png",
-                       f"{Settings.USER_FILES_PATH}/files_image.png"]
+        image_types = ["apng", "avif", "gif", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp", "bmp", "ico",
+                       "cur", "tif", "tiff"]
+        file_image_paths = {'txt': f"{Settings.USER_FILES_PATH}/text_icon.png",
+                            **{img: f"{Settings.USER_FILES_PATH}/photo_icon.png" for img in image_types},
+                            'zip': f"{Settings.USER_FILES_PATH}/zip_icon.png",
+                            'docx': f"{Settings.USER_FILES_PATH}/docx_icon.png",
+                            'doc': f"{Settings.USER_FILES_PATH}/docx_icon.png",
+                            'pptx': f"{Settings.USER_FILES_PATH}/pptx_icon.png",
+                            'ppt': f"{Settings.USER_FILES_PATH}/pptx_icon.png",
+                            'pdf': f"{Settings.USER_FILES_PATH}/pdf_icon.png",
+                            'xls': f"{Settings.USER_FILES_PATH}/xlsx_icon.png",
+                            'xlsx': f"{Settings.USER_FILES_PATH}/xlsx_icon.png",
+                            'default': f"{Settings.USER_FILES_PATH}/default_icon.png"}
+
+        directory_image_path = f"{Settings.USER_FILES_PATH}/dirs_icon.png"
 
         # Add items with corresponding images to the grid sizer
         while dirs or files:
             dir_file_flag = False
             if dirs:
                 item = dirs.pop(0)
-                image_path = image_paths[0]
+                image_path = directory_image_path
                 dir_file_flag = True
             elif files:
                 item = files.pop(0)
-                image_path = image_paths[1]
+                file_type = item[item.rfind('.')+1:]
+
+                if file_type in file_image_paths:
+                    image_path = file_image_paths[file_type]
+                else:
+                    image_path = file_image_paths['default']
+
             else:
                 continue
 
@@ -614,3 +634,10 @@ class FilesPanel(wx.Panel):
         settings = UserPanel(self.parent, self.frame, self.comm, self.parent.files_comm)
 
         self.parent.change_screen(self, settings)
+
+    def zip_folder_request(self, name):
+        file_path = f"{self.curPath}/{name}".lstrip('/')
+        full_path = f"{self.parent.username}/{file_path}"
+
+        msg = clientProtocol.pack_zip_folder_request(full_path)
+        self.comm.send(msg)

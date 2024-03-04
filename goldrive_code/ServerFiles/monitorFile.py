@@ -63,8 +63,6 @@ def monitor(path_to_watch, q):
             except Exception as e:
                 break
 
-
-
 def get_all_pid(process_name):
     current = []
     for p in psutil.process_iter():

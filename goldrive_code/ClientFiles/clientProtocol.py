@@ -155,7 +155,7 @@ def pack_share_request(path, username):
 
 def pack_change_photo_request(username, file_len):
     """
-    :param username: username to change to
+    :param username: username of user to change photo of
     :param file_len: length of the photo
     :return: message built py protocol
     """
@@ -187,51 +187,107 @@ def pack_change_email_request(username, email, code):
 
 
 def pack_send_email_request(username):
+    """
+    :param username: username to send mail to
+    :return: message built by protocol
+    """
     return f"17{str(len(str(username))).zfill(2)}{username}"
 
 
 def pack_move_file_folder_request(src, dst):
+    """
+    :param src: path of file to move
+    :param dst: path of destination
+    :return: message built by protocol
+    """
     return f"18{str(len(str(src))).zfill(2)}{src}{str(len(str(dst))).zfill(2)}{dst}"
 
 
 def pack_paste_file_request(src, dst):
+    """
+    :param src: path of file to paste
+    :param dst: path of where to paste
+    :return: message built by protocol
+    """
     return f"19{str(len(str(src))).zfill(2)}{src}{str(len(str(dst))).zfill(2)}{dst}"
 
 
 def pack_open_file_request(path):
+    """
+    :param path: path of file to open
+    :return: message built by protocol
+    """
     return f"20{str(len(str(path))).zfill(2)}{path}"
 
 
 def pack_get_details_request(username):
+    """
+    :param username: username to get details of
+    :return: message built by protocol
+    """
     return f"21{str(len(str(username))).zfill(2)}{username}"
 
 
 def pack_delete_profile_photo_request(username):
+    """
+    :param username: username of user to delete the profile photo of
+    :return: message built by protocol
+    """
     return f"22{str(len(str(username))).zfill(2)}{username}"
 
 
 def pack_verify_login_email_request(email, code, dont_ask_again, username):
+    """
+    :param email: email
+    :param code: code sent to email
+    :param dont_ask_again: does the user want to verify again on this computer
+    :param username: username of user
+    :return: message built by protocol
+    """
     return (f"23{str(len(str(email))).zfill(2)}{email}{str(len(str(code))).zfill(2)}{code}"
             f"{str(len(str(dont_ask_again))).zfill(2)}{dont_ask_again}{str(len(str(username))).zfill(2)}{username}")
 
 
 def pack_verify_register_email_request(username, password, email, code, dont_ask_again):
+    """
+    :param username: username to register
+    :param password: password to register
+    :param email: email to register
+    :param code: code entered by user
+    :param dont_ask_again: does the user want to confirm mail again on this computer
+    :return: message built by protocol
+    """
     return f"24{str(len(str(username))).zfill(2)}{username}{str(len(str(password))).zfill(2)}{password}" \
         f"{str(len(str(email))).zfill(2)}{email}{str(len(str(code))).zfill(2)}{code}" \
         f"{str(len(str(dont_ask_again))).zfill(2)}{dont_ask_again}"
 
 
 def pack_check_code_request(email, code):
+    """
+    :param email: email code was sent to
+    :param code: the code the user entered
+    :return: message built by protocol
+    """
     return f"25{str(len(str(email))).zfill(2)}{email}{str(len(str(code))).zfill(2)}{code}"
 
 
 def pack_forgot_password_request(username, password, confirmed_pass):
+    """
+    :param username: username of user
+    :param password: password to change to
+    :param confirmed_pass: confirm of password to change to
+    :return:
+    """
     return f"26{str(len(str(username))).zfill(2)}{username}{str(len(str(password))).zfill(2)}{password}" \
         f"{str(len(str(confirmed_pass))).zfill(2)}{confirmed_pass}"
 
 
-def pack_zip_file_request(file_path):
-    return f"27{str(len(str(file_path))).zfill(2)}{file_path}"
+def pack_zip_folder_request(folder_path):
+    """
+    :param folder_path: path of folder to zip
+    :return: message built by protocol
+    """
+    return f"27{str(len(str(folder_path))).zfill(2)}{folder_path}"
 
 
 if __name__ == '__main__':

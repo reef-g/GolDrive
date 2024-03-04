@@ -11,6 +11,13 @@ from pubsub import pub
 
 class ClientComm:
     def __init__(self, server_ip, port, recv_q, msg_len_bytes):
+        """
+        init of clientComm object
+        :param server_ip: ip of the server
+        :param port: port of the server
+        :param recv_q: msgs queue
+        :param msg_len_bytes: how many bytes to fill to
+        """
         self.server_ip = server_ip
         self.port = port
         self.recvQ = recv_q
@@ -21,12 +28,17 @@ class ClientComm:
         threading.Thread(target=self._main_loop).start()
 
     def _main_loop(self):
+        """
+        main loop of the server
+        :return: receives data and puts in the q
+        """
         try:
             self.socket.connect((self.server_ip, self.port))
         except Exception as e:
             sys.exit("Server is closed try again later")
 
         else:
+            # changing key
             self.enc_obj = self._change_key()
 
             while True:
@@ -38,6 +50,7 @@ class ClientComm:
 
                 decrypted_data = self.enc_obj.dec_msg(data)
 
+                # is it the default port
                 if self.port == Settings.SERVERPORT:
                     self.recvQ.put(decrypted_data)
                 else:
@@ -53,6 +66,9 @@ class ClientComm:
                         self.recvQ.put(decrypted_data)
 
     def _change_key(self):
+        """
+        swaps symmetric key with server
+        """
         privateA, a = encryption.get_dh_factor()
         try:
             b = int(self.socket.recv(10).decode())
@@ -68,6 +84,10 @@ class ClientComm:
             return crypto
 
     def send(self, msg):
+        """
+        :param msg: msg to send
+        :return: sends the message to the server
+        """
         encrypt_data = self.enc_obj.enc_msg(msg)
 
         # the length of the encrypted message
@@ -78,9 +98,16 @@ class ClientComm:
             sys.exit("Server is closed try again later")
 
     def _close(self):
+        """
+        closes the client socket
+        """
         self.socket.close()
 
     def _recv_file(self, params):
+        """
+        :param params: the params to use
+        :return: receives file and put in the q accordingly
+        """
         opcode = params[0]
         path, selected_path, Type, email = "", "", "", ""
         if opcode == "04":
@@ -138,6 +165,12 @@ class ClientComm:
                 self.recvQ.put(("20", '0', Type, self.enc_obj.dec_msg(data)))
 
     def send_file(self, opcode, path, currPath):
+        """
+        :param opcode: opcode of msg to send
+        :param path: path of file to send
+        :param currPath: path in the server
+        :return: sends file to the server
+        """
         try:
             with open(path, 'rb') as f:
                 data = f.read()
@@ -147,7 +180,8 @@ class ClientComm:
         else:
             cryptFile = self.enc_obj.enc_msg(data)
             if opcode == 12:
-                msg = clientProtocol.pack_upload_file_request(f"{currPath}/{path.split('/')[-1]}".lstrip('/'), len(cryptFile))
+                msg = clientProtocol.pack_upload_file_request(f"{currPath}/{path.split('/')[-1]}".lstrip('/'),
+                                                              len(cryptFile))
             else:
                 msg = clientProtocol.pack_change_photo_request(currPath, len(cryptFile))
 
@@ -158,7 +192,10 @@ class ClientComm:
                 print(str(e))
 
     def did_change_work(self):
-        return not self.enc_obj is None
+        """
+        :return: did the change key work
+        """
+        return self.enc_obj is not None
 
 
 if __name__ == "__main__":
@@ -173,4 +210,3 @@ if __name__ == "__main__":
     while True:
         data = msgQ.get()
         print(data)
-

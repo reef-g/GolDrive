@@ -92,11 +92,12 @@ class FolderMenuFeatures(wx.Menu):
         item = clicked_item.GetItemLabelText()
         if item == "Open":
             self.parent.chose_dir(self.name)
-
         elif item == "Delete folder":
             self.parent.delete_file_request(self.name)
         elif item == "Rename folder":
             self.parent.rename_file_request(self.name)
+        elif item == "Zip folder":
+            self.parent.zip_folder_request(self.name)
 
 
 class UserMenuFeatures(wx.Menu):
