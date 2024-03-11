@@ -27,11 +27,13 @@ image_types = ["apng", "avif", "gif", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "pn
 
 default_for_type = {'txt': 'Notepad.exe',
                     'docx': 'WINWORD.EXE',
+                    'doc': 'WINWORD.EXE',
                     'pptx': 'POWERPNT.EXE',
                     'ppt': 'POWERPNT.EXE',
                     'zip': 'explorer.exe',
                     **{img: 'Microsoft.Photos.exe' for img in image_types},
-                    'xlsx': 'EXCEL.EXE'}
+                    'xlsx': 'EXCEL.EXE',
+                    'xls': 'EXCEL.EXE'}
 
 
 def monitor(path_to_watch, q):
@@ -64,9 +66,9 @@ def monitor(path_to_watch, q):
                 break
 
 
-
 def get_all_pid(process_name):
     current = []
+
     for p in psutil.process_iter():
         if p.name() == process_name:
             current.append(p.pid)

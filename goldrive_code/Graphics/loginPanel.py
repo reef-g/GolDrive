@@ -1,4 +1,5 @@
 import wx
+import wx.adv
 from pubsub import pub
 from settings import CurrentSettings as Settings
 from ClientFiles import clientProtocol
@@ -13,6 +14,16 @@ class LoginPanel(wx.Panel):
         self.parent = parent
 
         self.username_input = None
+        self.SetBackgroundColour(wx.WHITE)
+
+        image = wx.Image(f"{Settings.USER_FILES_PATH}/info.png", wx.BITMAP_TYPE_ANY)
+
+        # Convert the image to a bitmap
+        bitmap = wx.Bitmap(image)
+
+        # Create a StaticBitmap control to display the image
+        info_button = wx.StaticBitmap(self, wx.ID_ANY, bitmap)
+        info_button.SetTransparent(0)
 
         title_font = wx.Font(68, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False, "High Tower Text")
         text_font = wx.Font(30, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
@@ -32,14 +43,14 @@ class LoginPanel(wx.Panel):
         forgot_password_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         self.sizer.AddSpacer(290)
-        title = TransparentText(self, -1, label="LOG IN", style=wx.TRANSPARENT_WINDOW)
+        title = TransparentText(self, label="LOG IN", style=wx.TRANSPARENT_WINDOW)
         title.SetForegroundColour(wx.BLACK)
         title.SetFont(title_font)
 
         name_sizer = wx.BoxSizer(wx.VERTICAL)
-        name_text = TransparentText(self, 1, label="Username: ", style=wx.TRANSPARENT_WINDOW)
+        name_text = TransparentText(self, label="Username: ", style=wx.TRANSPARENT_WINDOW)
         name_text.SetFont(text_font)
-        self.nameField = wx.TextCtrl(self, -1, name="username", size=(650, 40))
+        self.nameField = wx.TextCtrl(self, name="username", size=(650, 40))
         self.nameField.SetFont(self.entry_font)
 
         name_sizer.Add(name_text, 0, wx.Center, 5)
@@ -47,7 +58,7 @@ class LoginPanel(wx.Panel):
         name_sizer.AddSpacer(15)
 
         self.pass_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        pass_text = TransparentText(self, 1, label="Password: ", style=wx.TRANSPARENT_WINDOW)
+        pass_text = TransparentText(self, label="Password: ", style=wx.TRANSPARENT_WINDOW)
         pass_text.SetFont(text_font)
         self.passField = wx.TextCtrl(self, -1, name="password", size=(650, 40),
                                      style=wx.TE_PASSWORD | wx.TE_PROCESS_ENTER)
@@ -99,12 +110,29 @@ class LoginPanel(wx.Panel):
         pub.subscribe(self._email_ok, "forgotPassEmailOk")
         pub.subscribe(self._send_forgot_password_request, "showForgotPassDialog")
 
+        self.sizer.AddStretchSpacer()
+        self.sizer.Add(info_button, 0, wx.ALL, 10)
+        info_button.Bind(wx.EVT_LEFT_DOWN, self.show_info)
+
         self.SetSizer(self.sizer)
         self.Layout()
 
         self.Bind(wx.EVT_PAINT, self.PaintBackgroundImage)
 
         self.Hide()
+
+    @staticmethod
+    def show_info(event):
+        info = wx.adv.AboutDialogInfo()
+        info.Name = "GolDrive"
+        info.Version = "1.4"
+        info.Description = """GolDrive lets you save your files securely in the cloud
+            so you can access them from anywhere!"""
+        info.Developers = ["Reef Gold"]
+        info.License = "CC BY-ND"
+        info.SetCopyright("© 2024 Reef Gold. All rights reserved.")
+
+        wx.adv.AboutBox(info)
 
     def PaintBackgroundImage(self, evt):
         dc = wx.PaintDC(self)

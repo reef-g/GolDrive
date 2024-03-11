@@ -17,7 +17,7 @@ class HomeSettings():
 
 
 class CurrentSettings:
-    settings = HomeSettings()
+    settings = ClassSettings()
     SERVERPORT = settings.SERVERPORT
     SERVERIP = settings.SERVERIP
     USER_FILES_PATH = settings.USER_FILES_PATH

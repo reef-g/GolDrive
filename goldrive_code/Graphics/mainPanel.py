@@ -3,6 +3,7 @@ from pubsub import pub
 from .loginPanel import LoginPanel
 from .registerPanel import RegistrationPanel
 from .filesPanel import FilesPanel
+from settings import CurrentSettings as Settings
 
 
 class MainFrame(wx.Frame):
@@ -12,6 +13,9 @@ class MainFrame(wx.Frame):
         self.Maximize()
 
         self.main_panel = MainPanel(self, self.comm)
+
+        self.SetIcon(wx.Icon(f"{Settings.USER_FILES_PATH}/logo.ico"))
+
         box = wx.BoxSizer(wx.VERTICAL)
         box.Add(self.main_panel, 1, wx.EXPAND)
         # arrange the frame

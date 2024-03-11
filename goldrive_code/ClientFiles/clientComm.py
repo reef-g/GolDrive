@@ -35,7 +35,7 @@ class ClientComm:
         try:
             self.socket.connect((self.server_ip, self.port))
         except Exception as e:
-            sys.exit("Server is closed try again later")
+            sys.exit("Server is closed try again later, " + str(e))
 
         else:
             # changing key

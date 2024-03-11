@@ -11,6 +11,9 @@ from ClientFiles import clientProtocol
 
 class MyDropTarget(wx.DropTarget):
     def __init__(self, panel):
+        """
+        :param panel: parent panel
+        """
         wx.DropTarget.__init__(self)
         self.panel = panel
 
@@ -21,6 +24,12 @@ class MyDropTarget(wx.DropTarget):
         self.SetDataObject(self.data)
 
     def OnDragOver(self, x, y, default):
+        """
+        :param x: x position
+        :param y: y position
+        :param default: default cursor to show
+        :return: which cursor to show depending on where the mouse is
+        """
         # Check if the cursor is above an image using the panel's method
         cursor_to_show = wx.DragNone
         isAbove, name = self.panel.is_cursor_above_image()
@@ -33,10 +42,16 @@ class MyDropTarget(wx.DropTarget):
         return cursor_to_show
 
     def OnData(self, x, y, result):
+        """
+        :param x: x position
+        :param y: y position
+        :param result: is the drop ok
+        :return: result
+        """
         # Get the dropped data
         dragged_name = self.name.GetText()
         dropped_name = self.data.GetText()
-        # Process the dropped data (you can customize this part)
+        # Process the dropped data
         if dragged_name and dropped_name:
             self.panel.handle_dropped_item(dragged_name, dropped_name)
 
@@ -45,6 +60,11 @@ class MyDropTarget(wx.DropTarget):
 
 class FilesPanel(wx.Panel):
     def __init__(self, parent, frame, comm):
+        """
+        :param parent: panel parent
+        :param frame: frame parent
+        :param comm: comm object of user
+        """
         wx.Panel.__init__(self, parent, pos=wx.DefaultPosition, size=(1920, 1080), style=wx.SIMPLE_BORDER)
 
         self.grid_sizer = None
@@ -64,6 +84,7 @@ class FilesPanel(wx.Panel):
         self.title_sizer.Add(self.title)
 
         self.curPath = None
+        self.pathBeforeSharedFiles = None
         self.copied_file = None
         self.progressDialog = None
         self.file_name = ""
@@ -162,13 +183,19 @@ class FilesPanel(wx.Panel):
         self.Hide()
 
     def PaintBackgroundImage(self, evt):
+        """
+        :param evt: on paint event
+        :return: showing the background image
+        """
         dc = wx.PaintDC(self)
 
-        bmp = wx.Bitmap(rf"{Settings.USER_FILES_PATH}\bg.png")
+        bmp = wx.Bitmap(rf"{Settings.USER_FILES_PATH}/bg.png")
         dc.DrawBitmap(bmp, 0, 0)
 
     def change_settings_to_profile(self):
-
+        """
+        :return: changes the photo from the settings to the profile photo
+        """
         image = wx.Image(io.BytesIO(self.parent.profilePhoto), wx.BITMAP_TYPE_ANY)
         image.Rescale(108, 108)
 
@@ -178,12 +205,20 @@ class FilesPanel(wx.Panel):
         self.settings_img.SetBitmap(bitmap)
 
     def show_user_options_menu(self, event):
+        """
+        :param event: on click event
+        :return: showing user menu
+        """
         flag = True
         if self.curPath == "":
             flag = False
         self.PopupMenu(UserMenuFeatures(self, flag))
 
     def start_drag(self, event):
+        """
+        :param event: on drag event
+        :return: starts the drag event
+        """
         # Start a drag-and-drop operation when an item is left-clicked
         item_text = event.GetEventObject()
         data = wx.TextDataObject(item_text.GetName())
@@ -193,7 +228,12 @@ class FilesPanel(wx.Panel):
         drop_source.DoDragDrop(wx.Drag_CopyOnly)
 
     def handle_dropped_item(self, item_dropped, dropped_to_item):
-        # Process the dropped item (customize this part based on your needs)
+        """
+        :param item_dropped: name of the item dropped
+        :param dropped_to_item: name of the item dropped onto
+        :return: requests to move the file a folder from the server
+        """
+        # Process the dropped item
         self.file_name = item_dropped
         src = f"{self.parent.username}/{self.curPath}/{item_dropped}".replace('//', '/')
         dst = f"{self.parent.username}/{self.curPath}/{dropped_to_item}".replace('//', '/')
@@ -202,6 +242,9 @@ class FilesPanel(wx.Panel):
         self.comm.send(msg)
 
     def is_cursor_above_image(self):
+        """
+        :return: is the cursor above a directory image
+        """
         # Get the mouse position
         mouse_position = wx.GetMousePosition()
         screen_position = self.scroll_panel.GetScreenPosition()
@@ -221,9 +264,17 @@ class FilesPanel(wx.Panel):
         return flag, text_data_object
 
     def login_control(self, event):
+        """
+        :param event: on click event
+        :return: changes back to the login screen
+        """
         self.parent.change_screen(self, self.parent.login)
 
     def _get_branches(self, branches):
+        """
+        :param branches: users branches from the server
+        :return: updates the branches and shows them
+        """
         self.branches = branches
         self.copied_file = None
 
@@ -242,6 +293,10 @@ class FilesPanel(wx.Panel):
                 self.show_files(self.curPath)
 
     def show_files(self, path):
+        """
+        :param path: path of branch to show
+        :return: shows the correct files on the screen
+        """
         self.scroll_panel.DestroyChildren()
 
         if "@#$SHAREDFILES$#@" not in self.curPath.split('/'):
@@ -337,6 +392,10 @@ class FilesPanel(wx.Panel):
         self.sizer.Layout()
 
     def select_file(self, event):
+        """
+        :param event: on click event
+        :return: shows the correct menu if its a file or a folder
+        """
         obj = event.GetEventObject()
 
         path_to_find = f"{self.curPath}/{obj.GetName()}".lstrip('/')
@@ -345,24 +404,44 @@ class FilesPanel(wx.Panel):
             split_path = self.curPath.split('/')
             path_to_find = '/'.join(split_path[split_path.index("@#$SHAREDFILES$#@"):]) + '/' + obj.GetName()
 
+        # if left clicked a directory
         if self.filesObj[path_to_find][1] and event.GetEventType() == wx.EVT_LEFT_DOWN.typeId:
             self.chose_dir(obj.GetName())
 
+        # if right clicked a directory
         elif self.filesObj[path_to_find][1]:
             self.PopupMenu(FolderMenuFeatures(self, name=obj.GetName()))
+
+        # if right clicked a file
         else:
             self.PopupMenu(FileMenuFeatures(self, name=obj.GetName()))
 
     def chose_dir(self, name):
+        """
+        :param name: name of the directory chosen
+        :return: showing the files inside the directory chosen
+        """
         self.curPath += f"/{name}"
         self.curPath = self.curPath.lstrip('/')
         self.show_files(self.curPath)
 
     def back_dir(self, event):
-        self.curPath = "/".join(self.curPath.split('/')[:-1])
+        """
+        :param event: on click event
+        :return: going back a directory and showing the files
+        """
+        if self.curPath == "@#$SHAREDFILES$#@":
+            self.curPath = self.pathBeforeSharedFiles
+        else:
+            self.curPath = "/".join(self.curPath.split('/')[:-1])
+
         self.show_files(self.curPath)
 
     def delete_file_request(self, name):
+        """
+        :param name: name of the item to delete
+        :return: sends item delete request
+        """
         dlg = wx.MessageDialog(self, 'Do you want to delete?', 'Confirmation', wx.YES_NO | wx.ICON_QUESTION)
         result = dlg.ShowModal()
         dlg.Destroy()
@@ -374,7 +453,11 @@ class FilesPanel(wx.Panel):
             self.comm.send(msg2send)
 
     def _delete_obj(self):
+        """
+        :return: deletes the item from the branch
+        """
         is_dir = self.filesObj[f"{self.curPath}/{self.file_name}".lstrip('/')][1]
+        branches_to_remove = []
 
         for branch in self.branches:
             if branch[0] == self.curPath:
@@ -382,14 +465,9 @@ class FilesPanel(wx.Panel):
                     branch[1].remove(self.file_name)
                 else:
                     branch[2].remove(self.file_name)
-                break
 
-        branches_to_remove = []
-        for branch in self.branches:
-            if not is_dir:
-                break
-
-            if branch[0].startswith(f"{self.curPath}/{self.file_name}/".lstrip('/')) or branch[0] == self.file_name:
+            elif branch[0].startswith(f"{self.curPath}/{self.file_name}/".lstrip('/')) or branch[0] == self.file_name\
+                    and is_dir:
                 branches_to_remove.append(branch)
 
         for branch_to_remove in branches_to_remove:
@@ -399,6 +477,10 @@ class FilesPanel(wx.Panel):
         self.parent.show_pop_up(f"Deleted {self.file_name} successfully.", "Success")
 
     def rename_file_request(self, name):
+        """
+        :param name: file to rename
+        :return: send rename file request
+        """
         dlg = wx.TextEntryDialog(self, f'Do you want to rename {name}?', 'Confirmation', '')
         result = dlg.ShowModal()
         dlg.Destroy()
@@ -410,6 +492,10 @@ class FilesPanel(wx.Panel):
             self.comm.send(msg2send)
 
     def _rename_obj(self, new_name):
+        """
+        :param new_name: new name of file to rename
+        :return: renames item
+        """
         is_dir = self.filesObj[f"{self.curPath}/{self.file_name}".lstrip('/')][1]
 
         for branch in self.branches:
@@ -442,6 +528,10 @@ class FilesPanel(wx.Panel):
         self.parent.show_pop_up(f"Renamed {self.file_name} to {new_name} successfully.", "Success")
 
     def download_file_request(self, file_name):
+        """
+        :param file_name: name of file to download
+        :return: sends download file request
+        """
         base_name, file_extension = os.path.splitext(file_name)
 
         file_type = file_extension[1:].lower()
@@ -453,6 +543,7 @@ class FilesPanel(wx.Panel):
             'png': 'PNG images',
         }
 
+        # creating wild card for download type
         wildcard_list = [f"{type_descriptions[key]} (*.{key.lower()})|*.{key.lower()}" for key in type_descriptions]
         if file_type in type_descriptions:
             wildcard_list.remove(f"{type_descriptions[file_type]} (*.{file_type})|*.{file_type}")
@@ -476,6 +567,10 @@ class FilesPanel(wx.Panel):
         dlg.Destroy()
 
     def upload_file_request(self, event):
+        """
+        :param event: on click event
+        :return: send upload file request
+        """
         dlg = wx.FileDialog(self, "Choose a file", style=wx.DD_DEFAULT_STYLE)
         result = dlg.ShowModal()
 
@@ -484,6 +579,10 @@ class FilesPanel(wx.Panel):
             self.parent.files_comm.send_file(12, selected_path, f"{self.parent.username}/{self.curPath}".rstrip('/'))
 
     def _upload_object(self, path):
+        """
+        :param path: path of file in the server
+        :return: adds the file to the branches
+        """
         name_to_add = path.split('/')[-1]
         text_to_show = f"Uploaded {name_to_add} successfully."
         for branch in self.branches:
@@ -498,6 +597,10 @@ class FilesPanel(wx.Panel):
         self.parent.show_pop_up(text_to_show, "Success")
 
     def create_dir_request(self, event):
+        """
+        :param event: on click event
+        :return: send create dir request
+        """
         dlg = wx.TextEntryDialog(self, f'Please enter the name for the directory:', 'Create new directory', '')
         result = dlg.ShowModal()
         dlg.Destroy()
@@ -513,6 +616,9 @@ class FilesPanel(wx.Panel):
                                         "Error")
 
     def _create_dir(self):
+        """
+        :return: adding the directory to the path
+        """
         for branch in self.branches:
             if branch[0] == self.curPath:
                 branch[1].append(self.file_name)
@@ -523,6 +629,10 @@ class FilesPanel(wx.Panel):
         self.show_files(self.curPath)
 
     def share_file_request(self, name):
+        """
+        :param name: file name to share
+        :return: send share file request
+        """
         dlg = wx.TextEntryDialog(self, f'Enter username of user you want to share to:', 'Confirmation', '')
         result = dlg.ShowModal()
         dlg.Destroy()
@@ -538,9 +648,13 @@ class FilesPanel(wx.Panel):
                 self.parent.show_pop_up(f"Don't enter your own username.", "Error")
 
     def show_shared_files(self, event):
+        """
+        :param event: event on click
+        :return: shows shared files
+        """
         self.shared_files_img.Hide()
-        self.curPath += "/@#$SHAREDFILES$#@"
-        self.curPath.lstrip('/')
+        self.pathBeforeSharedFiles = self.curPath
+        self.curPath = "@#$SHAREDFILES$#@"
         self.show_files("@#$SHAREDFILES$#@")
 
     def _add_shared_file(self, path):
@@ -560,6 +674,7 @@ class FilesPanel(wx.Panel):
         else:
             for branch in self.branches:
                 if branch[0] == f"@#$SHAREDFILES$#@/{user_who_shared}":
+                    print(file)
                     branch[2].append(file)
                     branch[2].sort()
 
@@ -591,6 +706,8 @@ class FilesPanel(wx.Panel):
     def _handle_paste_file(self):
         file_name = self.copied_file.split('/')[-1]
         text_to_show = "Pasted file successfully."
+        is_dir = self.filesObj[self.copied_file][1]
+
         for branch in self.branches:
             if branch[0] == self.curPath:
                 if file_name not in branch[2]:
@@ -598,7 +715,6 @@ class FilesPanel(wx.Panel):
                     branch[2].sort()
                 else:
                     text_to_show = "Updated file successfully."
-                break
 
         self.show_files(self.curPath)
         self.parent.show_pop_up(text_to_show, "Success")

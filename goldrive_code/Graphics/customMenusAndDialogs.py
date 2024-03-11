@@ -4,6 +4,10 @@ import wx
 
 class FileMenuFeatures(wx.Menu):
     def __init__(self, parent, name):
+        """
+        :param parent: parent panel
+        :param name: name of what the user clicked on
+        """
         super(FileMenuFeatures, self).__init__()
 
         image_types = ["apng", "avif", "gif", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp", "bmp", "ico",
@@ -11,7 +15,6 @@ class FileMenuFeatures(wx.Menu):
 
         self.parent = parent
         self.name = name
-        self.pos = wx.GetMousePosition()
 
         static_text_item = wx.MenuItem(self, 0, name)
         # Make it non-selectable
@@ -40,6 +43,10 @@ class FileMenuFeatures(wx.Menu):
         self.Bind(wx.EVT_MENU, self.on_menu_item_click)
 
     def on_menu_item_click(self, event):
+        """
+        :param event: event
+        :return: starts the correct function based on what the user clicked
+        """
         clicked_item_id = event.GetId()
         clicked_item = self.FindItemById(clicked_item_id)
 
@@ -60,11 +67,14 @@ class FileMenuFeatures(wx.Menu):
 
 class FolderMenuFeatures(wx.Menu):
     def __init__(self, parent, name):
+        """
+        :param parent: parent panel
+        :param name: name of what the user clicked on
+        """
         super(FolderMenuFeatures, self).__init__()
 
         self.parent = parent
         self.name = name
-        self.pos = wx.GetMousePosition()
 
         static_text_item = wx.MenuItem(self, 0, name)
         # Make it non-selectable
@@ -86,6 +96,10 @@ class FolderMenuFeatures(wx.Menu):
         self.Bind(wx.EVT_MENU, self.on_menu_item_click)
 
     def on_menu_item_click(self, event):
+        """
+        :param event: event
+        :return: starts the according function to what the user pressed on
+        """
         clicked_item_id = event.GetId()
         clicked_item = self.FindItemById(clicked_item_id)
 
@@ -102,10 +116,13 @@ class FolderMenuFeatures(wx.Menu):
 
 class UserMenuFeatures(wx.Menu):
     def __init__(self, parent, show_back):
+        """
+        :param parent: parent panel
+        :param show_back: show go back flag
+        """
         super(UserMenuFeatures, self).__init__()
 
         self.parent = parent
-        self.pos = wx.GetMousePosition()
 
         self.Append(wx.MenuItem(self, -1, 'Upload file'))
         self.Append(wx.MenuItem(self, -1, 'Create new directory'))
@@ -122,6 +139,10 @@ class UserMenuFeatures(wx.Menu):
         self.Bind(wx.EVT_MENU, self.on_menu_item_click)
 
     def on_menu_item_click(self, event):
+        """
+        :param event: event
+        :return: starts the according function to what the user pressed on
+        """
         clicked_item_id = event.GetId()
         clicked_item = self.FindItemById(clicked_item_id)
 
@@ -138,10 +159,12 @@ class UserMenuFeatures(wx.Menu):
 
 class ProfileSettingsMenu(wx.Menu):
     def __init__(self, parent):
+        """
+        :param parent: parent panel
+        """
         super(ProfileSettingsMenu, self).__init__()
 
         self.parent = parent
-        self.pos = wx.GetMousePosition()
 
         self.Append(wx.MenuItem(self, -1, 'Change profile photo'))
         self.Append(wx.MenuItem(self, -1, 'Clear profile photo'))
@@ -154,6 +177,10 @@ class ProfileSettingsMenu(wx.Menu):
         self.Bind(wx.EVT_MENU, self.on_menu_item_click)
 
     def on_menu_item_click(self, event):
+        """
+        :param event: event
+        :return: strats the according function to what the user clicked on
+        """
         item_id = event.GetId()
         clicked_item = self.FindItemById(item_id)
 
@@ -166,6 +193,10 @@ class ProfileSettingsMenu(wx.Menu):
 
 class ChangePasswordDialog(wx.Dialog):
     def __init__(self, parent, title):
+        """
+        :param parent: parent panel
+        :param title: title of the dialog
+        """
         super(ChangePasswordDialog, self).__init__(parent, title=title, size=(388, 230), pos=(960-174, 540-115))
 
         self.panel = wx.Panel(self)
@@ -241,6 +272,10 @@ class ChangePasswordDialog(wx.Dialog):
         self.panel.SetSizerAndFit(sizer)
 
     def change_visibility(self, event):
+        """
+        :param event: event
+        :return: changes if you can see the password entered or not
+        """
         # Get the current position and size of the existing text control
         ctrls = {"old": self.old_password_ctrl, "new": self.new_password_ctrl, "con": self.confirm_password_ctrl}
         name = getattr(event.GetEventObject(), 'name', None)
@@ -279,18 +314,33 @@ class ChangePasswordDialog(wx.Dialog):
             self.is_showing_password = not self.is_showing_password
 
     def GetValues(self):
+        """
+        :return: the values entered
+        """
         return [self.old_password_ctrl.GetValue(), self.new_password_ctrl.GetValue(),
                 self.confirm_password_ctrl.GetValue()]
 
     def on_ok(self, event):
+        """
+        :param event: event on click
+        :return: ends the event with wx.ID_OK id
+        """
         self.EndModal(wx.ID_OK)
 
     def on_cancel(self, event):
+        """
+        :param event: event on click
+        :return: ends the event with wx.ID_CANCEL id
+        """
         self.EndModal(wx.ID_CANCEL)
 
 
 class ConfirmMailDialog(wx.Dialog):
     def __init__(self, parent, title):
+        """
+        :param parent: panel parent
+        :param title: title of the dialog
+        """
         super(ConfirmMailDialog, self).__init__(parent, title=title, size=(388, 150), pos=(960 - 174, 540 - 115))
 
         self.panel = wx.Panel(self)
@@ -326,17 +376,32 @@ class ConfirmMailDialog(wx.Dialog):
         self.panel.SetSizerAndFit(self.sizer)
 
     def GetValues(self):
+        """
+        :return: get the values entered
+        """
         return [self.text_ctrl.GetValue(), self.remember_checkbox.GetValue()]
 
     def on_ok(self, event):
+        """
+        :param event: event on click
+        :return: ends the event with wx.ID_OK id
+        """
         self.EndModal(wx.ID_OK)
 
     def on_cancel(self, event):
+        """
+        :param event: event on click
+        :return: ends the event with wx.ID_CANCEL id
+        """
         self.EndModal(wx.ID_CANCEL)
 
 
 class ForgotPasswordDialog(wx.Dialog):
     def __init__(self, parent, title):
+        """
+        :param parent: panel parent
+        :param title: title of the dialog
+        """
         super(ForgotPasswordDialog, self).__init__(parent, title=title, size=(388, 185), pos=(960-174, 540-115))
 
         self.panel = wx.Panel(self)
@@ -401,6 +466,10 @@ class ForgotPasswordDialog(wx.Dialog):
         self.panel.SetSizerAndFit(sizer)
 
     def change_visibility(self, event):
+        """
+        :param event: event
+        :return: changes if you can see the password entered or not
+        """
         # Get the current position and size of the existing text control
         ctrls = {"new": self.new_password_ctrl, "con": self.confirm_password_ctrl}
         name = getattr(event.GetEventObject(), 'name', None)
@@ -434,27 +503,46 @@ class ForgotPasswordDialog(wx.Dialog):
             self.is_showing_password = not self.is_showing_password
 
     def GetValues(self):
-        return [self.new_password_ctrl.GetValue(),self.confirm_password_ctrl.GetValue()]
+        """
+        :return: the values entered
+        """
+        return [self.new_password_ctrl.GetValue(), self.confirm_password_ctrl.GetValue()]
 
     def on_ok(self, event):
+        """
+        :param event: event on click
+        :return: ends the event with wx.ID_OK id
+        """
         self.EndModal(wx.ID_OK)
 
     def on_cancel(self, event):
+        """
+        :param event: event on click
+        :return: ends the event with wx.ID_CANCEL id
+        """
         self.EndModal(wx.ID_CANCEL)
 
 
 class TransparentText(wx.StaticText):
-    def __init__(self, parent, id=wx.ID_ANY, label='',
-                 pos=wx.DefaultPosition, size=wx.DefaultSize,
+    def __init__(self, parent, id=wx.ID_ANY, label='', pos=wx.DefaultPosition, size=wx.DefaultSize,
                  style=wx.TRANSPARENT_WINDOW, name='transparenttext'):
+        """
+        :param parent: panel parent
+        :param label: label of the text
+        :param style: style of the text
+        :param name: name of the text object
+        """
         wx.StaticText.__init__(self, parent, id, label,
                                pos, size, style, name)
 
         self.Bind(wx.EVT_PAINT, self.on_paint)
-        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: None)
         self.Bind(wx.EVT_SIZE, self.on_size)
 
     def on_paint(self, event):
+        """
+        :param event: event of on paint
+        :return: paints the text with transparent background
+        """
         bdc = wx.PaintDC(self)
         dc = wx.GCDC(bdc)
 
@@ -466,5 +554,9 @@ class TransparentText(wx.StaticText):
         dc.DrawText(self.GetLabel(), 0, 0)
 
     def on_size(self, event):
+        """
+        :param event: event of on size
+        :return: refreshes when screen changes size
+        """
         self.Refresh()
         event.Skip()

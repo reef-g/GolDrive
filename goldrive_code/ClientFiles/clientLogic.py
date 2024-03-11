@@ -262,7 +262,7 @@ def _handle_open_file(file_comm, status, server_path, data):
 
             # if any changes were made update the server to change the file
             if change_flag:
-                file_comm.send_file(file_path, server_path)
+                file_comm.send_file(12, file_path, server_path)
 
             # deleting the temp file
             try:

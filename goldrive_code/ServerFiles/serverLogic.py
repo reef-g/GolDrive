@@ -32,7 +32,7 @@ def _handle_messages(main_server, msg_q):
     :return: takes the message out the message queue and runs the according function
     """
     my_db = DB.DB()
-    ip_by_username = {}
+    user_by_ip = {}
     code_dic = {}
 
     recv_commands = {"01": _handle_registration, "02": _handle_login, "05": _handle_change_email,
@@ -50,7 +50,7 @@ def _handle_messages(main_server, msg_q):
             params.insert(0, code_dic)
 
         if protocol_num == "02" or protocol_num == "09" or protocol_num == "23":
-            params.insert(0, ip_by_username)
+            params.insert(0, user_by_ip)
 
         if protocol_num in recv_commands.keys():
             recv_commands[protocol_num](main_server, my_db, ip, *params)
@@ -101,7 +101,7 @@ def _handle_email_register(main_server, db, client_ip, code_dic, username, passw
             os.mkdir(f"{Settings.SERVER_FILES_PATH}/{username}/@#$SHAREDFILES$#@")
 
 
-def _handle_login(main_server, db, client_ip, ip_by_users, code_dic, username, password):
+def _handle_login(main_server, db, client_ip, users_by_ip, code_dic, username, password):
     """
     :param main_server: the server object
     :param db: the database
@@ -122,7 +122,7 @@ def _handle_login(main_server, db, client_ip, ip_by_users, code_dic, username, p
         remembered_ips = db.get_ips_of_user(username)
 
         if client_ip in remembered_ips:
-            _create_files_thread(main_server, db, client_ip, ip_by_users, username)
+            _create_files_thread(main_server, db, client_ip, users_by_ip, username)
             msg = serverProtocol.pack_login_verify_response(status)
         else:
             _send_email(main_server, db, client_ip, code_dic, email)
@@ -130,14 +130,14 @@ def _handle_login(main_server, db, client_ip, ip_by_users, code_dic, username, p
     main_server.send(client_ip, msg)
 
 
-def _handle_email_login(main_server, db, client_ip, ip_by_users, code_dic, email, code, dont_ask_again, username):
+def _handle_email_login(main_server, db, client_ip, users_by_ip, code_dic, email, code, dont_ask_again, username):
     status = 1
 
     if email in code_dic:
         if code_dic[email] == code:
             status = 0
 
-            _create_files_thread(main_server, db, client_ip, ip_by_users, username)
+            _create_files_thread(main_server, db, client_ip, users_by_ip, username)
 
             if dont_ask_again == "True":
                 db.add_remembered_ip(username, client_ip)
@@ -146,8 +146,8 @@ def _handle_email_login(main_server, db, client_ip, ip_by_users, code_dic, email
     main_server.send(client_ip, msg)
 
 
-def _create_files_thread(main_server, db, client_ip, ip_by_users, username):
-    ip_by_users[username] = client_ip
+def _create_files_thread(main_server, db, client_ip, users_by_ip, username):
+    users_by_ip[client_ip] = username
     port_to_give = portsHandler.PortsHandler.get_next_port()
     files_q = queue.Queue()
     files_server = serverComm.ServerComm(port_to_give, files_q, 10)
@@ -276,7 +276,7 @@ def _handle_create_dir(main_server, db, client_ip, path):
     main_server.send(client_ip, msg)
 
 
-def _handle_share_file(main_server, db, client_ip, ip_by_users, path, username):
+def _handle_share_file(main_server, db, client_ip, users_by_ip, path, username):
     status = 0
     user_who_shared = path.split('/')[0]
     path_to_add = f"{Settings.SERVER_FILES_PATH}/{username}/@#$SHAREDFILES$#@/{user_who_shared}"
@@ -302,9 +302,11 @@ def _handle_share_file(main_server, db, client_ip, ip_by_users, path, username):
     msg = serverProtocol.pack_share_response(status)
     main_server.send(client_ip, msg)
 
-    if username in ip_by_users:
+    ips_to_share = [key for key, value in users_by_ip.items() if value == username]
+
+    for ip in ips_to_share:
         msg = serverProtocol.pack_add_shared_file(path)
-        main_server.send(ip_by_users[username], msg)
+        main_server.send(ip, msg)
 
 
 def _handle_move_file(main_server, db, client_ip, src, dst):
@@ -321,8 +323,11 @@ def _handle_move_file(main_server, db, client_ip, src, dst):
 
 def _handle_paste_file(main_server, db, client_ip, src, dst):
     status = 0
+    full_src_path = f"{Settings.SERVER_FILES_PATH}/{src}"
+    full_dst_path = f"{Settings.SERVER_FILES_PATH}/{dst}"
+
     try:
-        shutil.copy(f"{Settings.SERVER_FILES_PATH}/{src}", f"{Settings.SERVER_FILES_PATH}/{dst}")
+        shutil.copy(full_src_path, full_dst_path)
     except Exception as e:
         print(str(e))
         status = 1
