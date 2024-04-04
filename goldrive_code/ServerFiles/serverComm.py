@@ -138,6 +138,13 @@ class ServerComm:
         return self.isRunning
 
     def recv_file(self, opcode, client, file_path, file_len):
+        """
+        :param opcode: opcode of the message
+        :param client: the socket of the client
+        :param file_path: the file path in the server
+        :param file_len: the length of the file
+        :return: adds message to socket for logic to handle
+        """
         data = bytearray()
         file_len = int(file_len)
         ip = self.openClients[client][0]
@@ -165,6 +172,11 @@ class ServerComm:
                 self.recv_q.put((ip, ("04", file_path, decData)))
 
     def send_file(self, client_ip, params):
+        """
+        :param client_ip: clients ip
+        :param params: the params to use
+        :return:
+        """
         client_socket = self._find_socket_by_ip(client_ip)
 
         try:
@@ -195,6 +207,7 @@ class ServerComm:
                         data = f.read()
                 except Exception as e:
                     print(str(e))
+                    # applying error message
                     status = 1
                     if opcode == "04":
                         msg = serverProtocol.pack_change_photo_response(status, 0)
@@ -204,9 +217,11 @@ class ServerComm:
                         msg = serverProtocol.pack_get_details_response(status, None, 0)
                     else:
                         msg = serverProtocol.pack_open_file_response(status, path, 0)
+
                     self.send(client_ip, msg)
 
                 else:
+                    # sending the correct message according to protocol
                     cryptFile = self.openClients[client_socket][1].enc_msg(data)
                     if opcode == "04":
                         msg = serverProtocol.pack_change_photo_response(status, len(cryptFile))
@@ -223,7 +238,6 @@ class ServerComm:
                     except Exception as e:
                         print(str(e))
                         self._handle_disconnect(client_socket)
-
 
 
 if __name__ == "__main__":

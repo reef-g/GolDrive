@@ -28,7 +28,7 @@ def get_data_from_string(line, leng):
     """
     :param line: line to slice
     :param leng: length to slice
-    :return:
+    :return: message built by protocol
     """
     # getting the data from the length of the string
     data = line[leng:leng + int(line[:leng])]
@@ -74,7 +74,7 @@ def pack_register_response(response, username, password, email):
     :param username: username of user
     :param password: password of user
     :param email: email of user
-    :return: opcode + length + response
+    :return: message built by protocol
     """
     return (f"01{str(len(str(response))).zfill(2)}{response}{str(len(str(username))).zfill(2)}{username}"
             f"{str(len(str(password))).zfill(2)}{password}{str(len(str(email))).zfill(2)}{email}")
@@ -83,7 +83,7 @@ def pack_register_response(response, username, password, email):
 def pack_login_response(response, email):
     """
     :param response: response to login
-    :return: opcode + length + response
+    :return: message built by protocol
     """
     return f"02{str(len(str(response))).zfill(2)}{response}{str(len(str(email))).zfill(2)}{email}"
 
@@ -91,13 +91,19 @@ def pack_login_response(response, email):
 def pack_verify_check_response(response):
     """
     :param response: response to verify check
-    :return: opcode + length + response
+    :return: message built by protocol
     """
     return f"15{str(len(str(response))).zfill(2)}{response}"
 
 
 def pack_file_download_response(response, datalen, path, selected_path):
-    # download file response
+    """
+    :param response: response to download file
+    :param datalen: length of the data
+    :param path: path of the file they asked to download
+    :param selected_path: path of the user where to download
+    :return: message built by protocol
+    """
     return f"11{str(len(str(response))).zfill(2)}{response}{str(len(str(datalen))).zfill(2)}{datalen}" \
            f"{str(len(str(path))).zfill(2)}{path}{str(len(str(selected_path))).zfill(2)}{selected_path}"
 
@@ -105,7 +111,7 @@ def pack_file_download_response(response, datalen, path, selected_path):
 def pack_upload_port(port):
     """
     :param port: upload port
-    return: opcode + length + response
+    :return: message built by protocol
     """
     return f"16{str(len(str(port))).zfill(2)}{port}"
 
@@ -114,7 +120,7 @@ def pack_file_upload_response(response, path):
     """
     :param response: response to file upload
     :param path: path of file
-    :return: opcode + length + response
+    :return: message built by protocol
     """
     return f"12{str(len(str(response))).zfill(2)}{response}{str(len(str(path))).zfill(2)}{path}"
 
@@ -122,7 +128,7 @@ def pack_file_upload_response(response, path):
 def pack_create_folder_response(response):
     """
     :param response: response to folder create
-    :return: opcode + length + response
+    :return: message built by protocol
     """
     return f"13{str(len(str(response))).zfill(2)}{response}"
 
@@ -131,7 +137,7 @@ def pack_delete_response(response):
     """
     :param response: response to file delete
     :param path: the path deleted
-    :return: opcode + length + response
+    :return: message built by protocol
     """
     return f"10{str(len(str(response))).zfill(2)}{response}"
 
@@ -141,7 +147,7 @@ def pack_rename_file_response(response, new_name):
     :param response: response to file delete
     :param path: the path deleted
     :param new_name: the name of the file
-    :return: opcode + length + response
+    :return: message built by protocol
     """
     return f"08{str(len(str(response))).zfill(2)}{response}{str(len(str(new_name))).zfill(2)}{new_name}"
 
@@ -149,7 +155,7 @@ def pack_rename_file_response(response, new_name):
 def pack_share_response(response):
     """
     :param response: response to share file
-    :return: opcode + length + response
+    :return: message built by protocol
     """
     return f"09{str(len(str(response))).zfill(2)}{response}"
 
@@ -157,7 +163,7 @@ def pack_share_response(response):
 def pack_change_photo_response(response, file_len):
     """
     :param response: response to change photo
-    :return: opcode + length + response
+    :return: message built by protocol
     """
     return f"04{str(len(str(response))).zfill(2)}{response}{str(len(str(file_len))).zfill(2)}{file_len}"
 
@@ -165,7 +171,7 @@ def pack_change_photo_response(response, file_len):
 def pack_change_password_response(response):
     """
     :param response: response to change password
-    :return: opcode + length + response
+    :return: message built by protocol
     """
     return f"06{str(len(str(response))).zfill(2)}{response}"
 
@@ -174,19 +180,23 @@ def pack_change_email_response(response, email):
     """
     :param response: response to change email
     :param email: email to change to
-    :return: opcode + length + response
+    :return: message built by protocol
     """
     return f"05{str(len(str(response))).zfill(2)}{response}{str(len(str(email))).zfill(2)}{email}"
 
 
 def pack_login_verify_response(status):
+    """
+    :param status: response to login verify
+    :return: message built by protocol
+    """
     return f"23{str(len(str(status))).zfill(2)}{status}"
 
 
 def pack_add_shared_file(path):
     """
     :param path: path of file to add to client branches
-    :return: opcode + length of path + path
+    :return: message built by protocol
     """
     return f"14{str(len(str(path))).zfill(2)}{path}"
 
@@ -199,42 +209,79 @@ def pack_move_file_response(status, new_folder):
     """
     :param status:
     :param new_folder:
-    :return:
+    :return: message built by protocol
     """
     return f"18{str(len(str(status))).zfill(2)}{status}{str(len(str(new_folder))).zfill(2)}{new_folder}"
 
 
 def pack_paste_file_response(status):
+    """
+    :param status: response to paste file
+    :return: message built by protocol
+    """
     return f"19{str(len(str(status))).zfill(2)}{status}"
 
 
 def pack_open_file_response(status, file_path, data_len):
+    """
+    :param status: status to open file
+    :param file_path: the file path in the server
+    :param data_len: the length of the data of the file
+    :return: message built by protocol
+    """
     return f"20{str(len(str(status))).zfill(2)}{status}{str(len(str(data_len))).zfill(2)}{data_len}" \
            f"{str(len(str(file_path))).zfill(2)}{file_path}"
 
 
 def pack_get_details_response(status, email, data_len):
+    """
+    :param status: response to get details
+    :param email: email of the client
+    :param data_len: length of the profile photo
+    :return: message built by protocol
+    """
     return (f"21{str(len(str(status))).zfill(2)}{status}"
             f"{str(len(str(email))).zfill(2)}{email}{str(len(str(data_len))).zfill(2)}{data_len}")
 
 
 def pack_delete_profile_photo_response(status):
+    """
+    :param status: response to delete photo request
+    :return: message built by protocol
+    """
     return f"22{str(len(str(status))).zfill(2)}{status}"
 
 
 def pack_register_verify_response(status):
+    """
+    :param status: response to register verify
+    :return: message built by protocol
+    """
     return f"24{str(len(str(status))).zfill(2)}{status}"
 
 
 def pack_check_code_response(status):
+    """
+    :param status: response to check code
+    :return: message built by protocol
+    """
     return f"25{str(len(str(status))).zfill(2)}{status}"
 
 
 def pack_forgot_password_response(status):
+    """
+    :param status: response to forgot password request
+    :return: message built by protocol
+    """
     return f"26{str(len(str(status))).zfill(2)}{status}"
 
 
 def pack_zip_folder_response(status, zipped_folder_name):
+    """
+    :param status: response to zip folder
+    :param zipped_folder_name: zipped folder name
+    :return: message built by protocol
+    """
     return f"27{str(len(str(status))).zfill(2)}{status}{str(len(str(zipped_folder_name))).zfill(2)}{zipped_folder_name}"
 
 

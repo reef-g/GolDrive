@@ -7,7 +7,7 @@ class ClassSettings:
         self.USER_PROFILE_PHOTOS = r"D:\!ReefGold\user_profile_photos".replace('\\', '/')
 
 
-class HomeSettings():
+class HomeSettings:
     def __init__(self):
         self.SERVERPORT = 1234
         self.SERVERIP = "10.0.0.12"

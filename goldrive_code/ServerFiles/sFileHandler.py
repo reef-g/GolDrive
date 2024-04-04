@@ -3,6 +3,11 @@ import zipfile
 
 
 def rename_file(path, new_name):
+    """
+    :param path: path of file to rename
+    :param new_name: the new name of the file
+    :return: renames the file and returns 1 if it didn't work and 0 if it manged
+    """
     status = 1
     if os.path.exists(path):
         try:
@@ -18,6 +23,10 @@ def rename_file(path, new_name):
 
 
 def delete_file(path):
+    """
+    :param path: path of file to delete
+    :return: deletes file 1 if successful 0 if failed
+    """
     status = 0
     if os.path.exists(path):
         try:
@@ -34,6 +43,10 @@ def delete_file(path):
 
 
 def download_file(path):
+    """
+    :param path: path of file to download
+    :return: reads the file 1 if it could read it 0 if failed
+    """
     status = 1
 
     if os.path.exists(path):
@@ -50,6 +63,11 @@ def download_file(path):
 
 
 def generate_unique_zip_name(path, base_name):
+    """
+    :param path: path of the folder to zip
+    :param base_name: the name of the folder
+    :return: creates the name based on the existing files
+    """
     full_path = f"{path}/{base_name}.zip"
     unique_name = f"{base_name}.zip"
 
@@ -63,6 +81,10 @@ def generate_unique_zip_name(path, base_name):
 
 
 def create_zip(total_path):
+    """
+    :param total_path: path of the folder
+    :return: zips the path returns 1 if failed to zip 0 if it worked
+    """
     status = 0
     zip_file_name = None
     if os.path.isdir(total_path):
@@ -70,7 +92,7 @@ def create_zip(total_path):
             folder_path, name = total_path.split('/')[:-1], total_path.split('/')[-1]
             folder_path = '/'.join(folder_path)
 
-            # Create the zip file name by adding ".zip" to the base name
+            # generates the correct name
             zip_file_name = generate_unique_zip_name(folder_path, name)
             zip_path = f"{folder_path}/{zip_file_name}"
 

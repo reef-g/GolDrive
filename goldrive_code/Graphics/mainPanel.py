@@ -8,6 +8,10 @@ from settings import CurrentSettings as Settings
 
 class MainFrame(wx.Frame):
     def __init__(self, comm, parent=None):
+        """
+        :param comm: client comm object
+        :param parent: panel parent
+        """
         super(MainFrame, self).__init__(parent, title="GolDrive")
         self.comm = comm
         self.Maximize()
@@ -26,6 +30,10 @@ class MainFrame(wx.Frame):
 
 class MainPanel(wx.Panel):
     def __init__(self, parent, comm):
+        """
+        :param parent:
+        :param comm:
+        """
         wx.Panel.__init__(self, parent)
         self.frame = parent
         self.comm = comm
@@ -53,6 +61,11 @@ class MainPanel(wx.Panel):
         pub.subscribe(self._files_comm_update, "updateFileComm")
 
     def change_screen(self, cur_screen, screen):
+        """
+        :param cur_screen: screen showing panel object
+        :param screen: screen to show panel object
+        :return: changes screen
+        """
         cur_screen.Hide()
         screen.Show()
 
@@ -61,9 +74,18 @@ class MainPanel(wx.Panel):
         self.Update()
 
     def show_pop_up(self, text, title):
+        """
+        :param text: text to show
+        :param title: title of pop up
+        :return: shows pop up message dialog
+        """
         dlg = wx.MessageDialog(self, text, title, wx.OK | wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
 
     def _files_comm_update(self, file_comm):
+        """
+        :param file_comm: client file comm object
+        :return:
+        """
         self.files_comm = file_comm

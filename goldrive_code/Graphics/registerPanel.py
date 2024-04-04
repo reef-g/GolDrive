@@ -7,6 +7,11 @@ from settings import CurrentSettings as Settings
 
 class RegistrationPanel(wx.Panel):
     def __init__(self, parent, frame, comm):
+        """
+        :param parent: panel parent
+        :param frame: frame parent
+        :param comm: client comm object
+        """
         wx.Panel.__init__(self, parent, pos=wx.DefaultPosition, size=(1920, 1080), style=wx.SIMPLE_BORDER)
         self.frame = frame
         self.comm = comm
@@ -21,8 +26,8 @@ class RegistrationPanel(wx.Panel):
         self.entry_font = wx.Font(20, wx.DECORATIVE, wx.NORMAL, wx.NORMAL, False)
         button_font = wx.Font(15, wx.DEFAULT, wx.NORMAL, wx.BOLD)
 
-        hidden_path = f"{Settings.USER_FILES_PATH}\\hidden-eye.png"
-        open_path = f"{Settings.USER_FILES_PATH}\\open-eye.png"
+        hidden_path = f"{Settings.USER_FILES_PATH}/hidden-eye.png"
+        open_path = f"{Settings.USER_FILES_PATH}/open-eye.png"
 
         self.is_showing_password = False
         self.hidden_bitmap = wx.Bitmap(hidden_path, wx.BITMAP_TYPE_ANY)
@@ -106,12 +111,20 @@ class RegistrationPanel(wx.Panel):
         self.Hide()
 
     def PaintBackgroundImage(self, evt):
+        """
+        :param evt: on paint event
+        :return: paints the background image
+        """
         dc = wx.PaintDC(self)
 
         bmp = wx.Bitmap(rf"{Settings.USER_FILES_PATH}\bg.png")
         dc.DrawBitmap(bmp, 0, 0)
 
     def change_visibility(self, event):
+        """
+        :param event: on click event
+        :return: changes if you can see the password entered or not
+        """
         open_or_closed = self.hidden_bitmap if not self.is_showing_password else self.shown_bitmap
 
         position = self.passField.GetPosition()
@@ -133,9 +146,17 @@ class RegistrationPanel(wx.Panel):
         self.is_showing_password = not self.is_showing_password
 
     def login_control(self, event):
+        """
+        :param event: on click event
+        :return: shows the login page panel
+        """
         self.parent.change_screen(self, self.parent.login)
 
     def on_register(self, event):
+        """
+        :param event: on click event
+        :return: sends register request
+        """
         username_input = self.nameField.GetValue()
         password_input = self.passField.GetValue()
         email_input = self.emailField.GetValue()
@@ -148,6 +169,12 @@ class RegistrationPanel(wx.Panel):
         self.comm.send(msg2send)
 
     def register_ok(self, username, password, email):
+        """
+        :param username: username entered
+        :param password: password entered
+        :param email: email entered
+        :return: sends the code check request
+        """
         self.username = username
         self.password = password
         self.email = email
@@ -162,5 +189,8 @@ class RegistrationPanel(wx.Panel):
             self.comm.send(msg)
 
     def verify_ok(self):
+        """
+        :return: shows the login page panel
+        """
         self.parent.show_pop_up("User created successfully.", "Success")
         self.parent.change_screen(self, self.parent.login)

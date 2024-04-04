@@ -8,6 +8,11 @@ from .customMenusAndDialogs import ConfirmMailDialog, ForgotPasswordDialog, Tran
 
 class LoginPanel(wx.Panel):
     def __init__(self, parent, frame, comm):
+        """
+        :param parent: panel parent
+        :param frame: frame parent
+        :param comm: client comm object
+        """
         wx.Panel.__init__(self, parent, pos=wx.DefaultPosition, size=(1920, 1080), style=wx.TRANSPARENT_WINDOW)
         self.frame = frame
         self.comm = comm
@@ -18,10 +23,8 @@ class LoginPanel(wx.Panel):
 
         image = wx.Image(f"{Settings.USER_FILES_PATH}/info.png", wx.BITMAP_TYPE_ANY)
 
-        # Convert the image to a bitmap
         bitmap = wx.Bitmap(image)
 
-        # Create a StaticBitmap control to display the image
         info_button = wx.StaticBitmap(self, wx.ID_ANY, bitmap)
         info_button.SetTransparent(0)
 
@@ -48,7 +51,7 @@ class LoginPanel(wx.Panel):
         title.SetFont(title_font)
 
         name_sizer = wx.BoxSizer(wx.VERTICAL)
-        name_text = TransparentText(self, label="Username: ", style=wx.TRANSPARENT_WINDOW)
+        name_text = TransparentText(self, label="Username ", style=wx.TRANSPARENT_WINDOW)
         name_text.SetFont(text_font)
         self.nameField = wx.TextCtrl(self, name="username", size=(650, 40))
         self.nameField.SetFont(self.entry_font)
@@ -58,7 +61,7 @@ class LoginPanel(wx.Panel):
         name_sizer.AddSpacer(15)
 
         self.pass_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        pass_text = TransparentText(self, label="Password: ", style=wx.TRANSPARENT_WINDOW)
+        pass_text = TransparentText(self, label="Password ", style=wx.TRANSPARENT_WINDOW)
         pass_text.SetFont(text_font)
         self.passField = wx.TextCtrl(self, -1, name="password", size=(650, 40),
                                      style=wx.TE_PASSWORD | wx.TE_PROCESS_ENTER)
@@ -92,8 +95,6 @@ class LoginPanel(wx.Panel):
         register_button.SetFont(button_font)
         register_button.Bind(wx.EVT_BUTTON, self.register_control)
 
-        # self.SetTabOrder([self.nameField, self.passField, login_button, register_button])
-
         button_sizer.Add(login_button, 0, wx.CENTER, 10)
         button_sizer.AddSpacer(80)
         button_sizer.Add(register_button, 0, wx.CENTER, 10)
@@ -123,6 +124,10 @@ class LoginPanel(wx.Panel):
 
     @staticmethod
     def show_info(event):
+        """
+        :param event: on click event
+        :return: shows about info dialog
+        """
         info = wx.adv.AboutDialogInfo()
         info.Name = "GolDrive"
         info.Version = "1.4"
@@ -135,12 +140,20 @@ class LoginPanel(wx.Panel):
         wx.adv.AboutBox(info)
 
     def PaintBackgroundImage(self, evt):
+        """
+        :param evt: paint event
+        :return: shows the background image
+        """
         dc = wx.PaintDC(self)
 
-        bmp = wx.Bitmap(rf"{Settings.USER_FILES_PATH}\bg.png")
+        bmp = wx.Bitmap(rf"{Settings.USER_FILES_PATH}/bg.png")
         dc.DrawBitmap(bmp, 0, 0)
 
     def change_visibility(self, event):
+        """
+        :param event: on click event
+        :return: changes if you can see the password entered or not
+        """
         open_or_closed = self.hidden_bitmap if not self.is_showing_password else self.shown_bitmap
 
         position = self.passField.GetPosition()
@@ -163,9 +176,17 @@ class LoginPanel(wx.Panel):
         self.is_showing_password = not self.is_showing_password
 
     def register_control(self, event):
+        """
+        :param event: on click event
+        :return: shows the registration panel
+        """
         self.parent.change_screen(self, self.parent.register)
 
     def login_ok(self, email):
+        """
+        :param email: email to send the verify email to
+        :return: sends the confirm mail request
+        """
         con = ConfirmMailDialog(self, "Verify")
         result = con.ShowModal()
 
@@ -176,6 +197,9 @@ class LoginPanel(wx.Panel):
             self.comm.send(msg)
 
     def verify_ok(self):
+        """
+        :return: shows the users files
+        """
         self.parent.username = self.username_input
         self.parent.files.title.SetLabel(self.parent.username.upper())
 
@@ -185,6 +209,10 @@ class LoginPanel(wx.Panel):
         self.parent.change_screen(self, self.parent.files)
 
     def on_ok(self, event):
+        """
+        :param event: on click event
+        :return: gets the input from the user and send login request
+        """
         with open(f"{Settings.USER_FILES_PATH}/Settings.png", 'rb') as f:
             data = f.read()
 
@@ -197,7 +225,7 @@ class LoginPanel(wx.Panel):
         self.nameField.SetValue("")
         self.passField.SetValue("")
 
-        if not 0 < len(self.username_input) <= 10 or not 0 < len(self.username_input) <= 10:
+        if not 0 < len(self.username_input) <= 10:
             self.parent.show_pop_up("Please enter a valid username and password.", "Error")
         else:
             self.parent.username = self.username_input
@@ -205,13 +233,20 @@ class LoginPanel(wx.Panel):
             self.comm.send(msg2send)
 
     def _get_details(self, email, photo):
+        """
+        :param email: email of user
+        :param photo: profile photo
+        :return: changed the details of the user and changes the profile photo
+        """
         self.parent.email = email
         self.parent.profilePhoto = photo
         wx.CallAfter(pub.sendMessage, "changeSettingsToPhoto")
 
-        self.parent.change_screen(self, self.parent.files)
-
     def _get_user_forgot_password(self, event):
+        """
+        :param event: on click event
+        :return: send email verify request
+        """
         dlg = wx.TextEntryDialog(self, f'Enter username of user:', 'Verify', '')
         result = dlg.ShowModal()
         dlg.Destroy()
@@ -225,6 +260,10 @@ class LoginPanel(wx.Panel):
             self.comm.send(msg)
 
     def _email_ok(self, email):
+        """
+        :param email: the email adress that the email was sent to
+        :return: sends check code request
+        """
         code_dlg = wx.TextEntryDialog(self, "Enter the 6-digit code sent to your mail:", "Verify", "")
         result = code_dlg.ShowModal()
         code_dlg.Destroy()
@@ -236,6 +275,9 @@ class LoginPanel(wx.Panel):
             self.comm.send(msg)
 
     def _send_forgot_password_request(self):
+        """
+        :return: sends change password request
+        """
         dlg = ForgotPasswordDialog(self, "Enter new password")
         result = dlg.ShowModal()
 

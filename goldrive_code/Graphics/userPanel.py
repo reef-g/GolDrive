@@ -8,6 +8,12 @@ from settings import CurrentSettings as Settings
 
 class UserPanel(wx.Panel):
     def __init__(self, parent, frame, comm, files_comm):
+        """
+        :param parent: panel parent
+        :param frame: frame parent
+        :param comm: client comm object
+        :param files_comm: client file comm object
+        """
         wx.Panel.__init__(self, parent, pos=wx.DefaultPosition, size=(1920, 1080), style=wx.SIMPLE_BORDER)
         self.frame = frame
         self.comm = comm
@@ -110,18 +116,34 @@ class UserPanel(wx.Panel):
         self.Hide()
 
     def PaintBackgroundImage(self, evt):
+        """
+        :param evt: on paint event
+        :return: prints the background image
+        """
         dc = wx.PaintDC(self)
 
-        bmp = wx.Bitmap(rf"{Settings.USER_FILES_PATH}\bg.png")
+        bmp = wx.Bitmap(f"{Settings.USER_FILES_PATH}/bg.png")
         dc.DrawBitmap(bmp, 0, 0)
 
     def login_control(self, event):
+        """
+        :param event: on click event
+        :return: shows the login page panel
+        """
         self.parent.change_screen(self, self.parent.login)
 
     def files_control(self, event):
+        """
+        :param event: on click event
+        :return: shows the users files panel
+        """
         self.parent.change_screen(self, self.parent.files)
 
     def change_email_request(self, event):
+        """
+        :param event: on click event
+        :return: sends email change request
+        """
         email_dlg = wx.TextEntryDialog(self, f'What new email to change to?', 'Confirmation', '')
         result = email_dlg.ShowModal()
 
@@ -130,6 +152,7 @@ class UserPanel(wx.Panel):
             email_dlg.Destroy()
 
             split_email = email.split('@')
+            # checking if email is valid
             if '@' in email and len(split_email) == 2 and split_email[0] and split_email[1]:
                 msg = clientProtocol.pack_send_verify_request(email)
                 self.comm.send(msg)
@@ -137,6 +160,7 @@ class UserPanel(wx.Panel):
                 verify_dlg = wx.TextEntryDialog(self, f'Which 6-digit code did you receive in your mail?', 'Verify', '')
                 result = verify_dlg.ShowModal()
 
+                # sends the request to check if the code entered is correct
                 if result == wx.ID_OK:
                     msg = clientProtocol.pack_change_email_request(self.parent.username, email, verify_dlg.GetValue())
                     self.comm.send(msg)
@@ -149,6 +173,10 @@ class UserPanel(wx.Panel):
             email_dlg.Destroy()
 
     def _change_email(self, email):
+        """
+        :param email: email to change to
+        :return: changes email of user
+        """
         self.parent.email = email
         self.emailTitle.SetLabel(f"Email: {email}")
         self.Layout()
@@ -156,6 +184,10 @@ class UserPanel(wx.Panel):
         self.parent.show_pop_up(f"Changed email to {email} successfully.", "Success")
 
     def change_password_request(self, event):
+        """
+        :param event: on click event
+        :return: sends change password request
+        """
         password_dlg = ChangePasswordDialog(self, "Confirmation")
         result = password_dlg.ShowModal()
 
@@ -167,6 +199,10 @@ class UserPanel(wx.Panel):
         password_dlg.Destroy()
 
     def change_photo_request(self, event):
+        """
+        :param event: on click event
+        :return: sends change photo request
+        """
         image_types = ["apng", "avif", "gif", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp", "bmp", "ico",
                        "cur", "tif", "tiff"]
 
@@ -181,6 +217,10 @@ class UserPanel(wx.Panel):
             self.files_comm.send_file(4, self.selected_path, self.parent.username)
 
     def _change_photo(self, data):
+        """
+        :param data: data of the photo
+        :return: changes the users photo
+        """
         self.parent.profilePhoto = data
 
         image = wx.Image(io.BytesIO(self.parent.profilePhoto), wx.BITMAP_TYPE_ANY)
@@ -193,6 +233,10 @@ class UserPanel(wx.Panel):
         self.settings_img.SetBitmap(bitmap)
 
     def delete_photo_request(self, event):
+        """
+        :param event: on click event
+        :return: sends delete profile photo request
+        """
         verify_dlg = wx.MessageDialog(self, f'Are you sure you want to delete your profile photo?',
                                       'Confirmation', wx.YES_NO | wx.ICON_QUESTION)
         result = verify_dlg.ShowModal()
@@ -202,4 +246,8 @@ class UserPanel(wx.Panel):
             self.files_comm.send(msg)
 
     def show_settings_menu(self, event):
+        """
+        :param event: on click event
+        :return: shows the settings menu
+        """
         self.PopupMenu(ProfileSettingsMenu(self))

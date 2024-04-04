@@ -18,6 +18,7 @@ class DB:
         :return:
         """
 
+        # enabling changes from different threads
         self.conn = sqlite3.connect(self.DB_name, check_same_thread=False)
         self.curr = self.conn.cursor()
         create_users = """
@@ -143,20 +144,27 @@ class DB:
         return flag
 
     def get_ips_of_user(self, username):
+        """
+        :param username: username of user
+        :return: all ips the user asked to not be asked again on
+        """
         sql = "SELECT ip FROM ipByUser WHERE username = ?"
         self.curr.execute(sql, (username,))
 
         ips = self.curr.fetchall()
-        rememberedIps = []
+        remembered_ips = []
         for ipTuple in ips:
             for ip in ipTuple:
-                rememberedIps.append(ip)
+                remembered_ips.append(ip)
 
-        return rememberedIps
-
-
+        return remembered_ips
 
     def add_remembered_ip(self, username, ip):
+        """
+        :param username: username of user
+        :param ip: ip of computer
+        :return: adds the username with the ip to be remembered
+        """
         sql = "INSERT INTO ipByUser VALUES (?,?)"
         self.curr.execute(sql, (username, ip))
         self.conn.commit()

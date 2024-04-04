@@ -10,6 +10,7 @@ FILE_NOTIFY_CHANGE_LAST_WRITE = 0x0010
 FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
 OPEN_EXISTING = 3
 
+# the action name for the change
 file_actions = {
     0x00000001:
         "Added",
@@ -25,6 +26,7 @@ file_actions = {
 image_types = ["apng", "avif", "gif", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp", "bmp", "ico", "cur",
                "tif", "tiff"]
 
+# the default apps to open for each type
 default_for_type = {'txt': 'Notepad.exe',
                     'docx': 'WINWORD.EXE',
                     'doc': 'WINWORD.EXE',
@@ -37,6 +39,11 @@ default_for_type = {'txt': 'Notepad.exe',
 
 
 def monitor(path_to_watch, q):
+    """
+    :param path_to_watch: path of directory to watch changes made in
+    :param q: queue to update info in
+    :return: checks for changes and puts Changed in the queue when a change is made in the directory given
+    """
     directory_handle = win32file.CreateFileW(
         path_to_watch,
         FILE_LIST_DIRECTORY,  # No access (required for directories)
@@ -67,6 +74,10 @@ def monitor(path_to_watch, q):
 
 
 def get_all_pid(process_name):
+    """
+    :param process_name: get all pid for a process
+    :return: the current pid open for the process checking
+    """
     current = []
 
     for p in psutil.process_iter():
@@ -77,6 +88,11 @@ def get_all_pid(process_name):
 
 
 def wait_until(file_path, q):
+    """
+    :param file_path: file path
+    :param q: queue to put changes in
+    :return: opens the file and when the user closes it puts in the queue finished
+    """
     file_extension = file_path[file_path.rfind('.') + 1:]
 
     if file_extension in default_for_type:

@@ -3,6 +3,7 @@ import wx.lib.scrolledpanel
 import io
 import os
 from pubsub import pub
+import time
 from .userPanel import UserPanel
 from .customMenusAndDialogs import UserMenuFeatures, FileMenuFeatures, FolderMenuFeatures, TransparentText
 from settings import CurrentSettings as Settings
@@ -658,6 +659,10 @@ class FilesPanel(wx.Panel):
         self.show_files("@#$SHAREDFILES$#@")
 
     def _add_shared_file(self, path):
+        """
+        :param path: path to add
+        :return: adds the file to the users shared files
+        """
         user_who_shared, file = path.split('/')[0], path.split('/')[-1]
         for branch in self.branches:
             if branch[0] == "@#$SHAREDFILES$#@":
@@ -666,11 +671,13 @@ class FilesPanel(wx.Panel):
                     branch[1].sort()
                 break
 
+        # if the user who shared hasnent shared a file to this user before
         if not any(branch[0] == f"@#$SHAREDFILES$#@/{user_who_shared}" for branch in self.branches):
             self.branches.append((f'@#$SHAREDFILES$#@/{user_who_shared}', [], []))
             self.branches[-1][2].append(file)
             self.branches[-1][2].sort()
 
+        # if the user has shared before add it to his branch
         else:
             for branch in self.branches:
                 if branch[0] == f"@#$SHAREDFILES$#@/{user_who_shared}":
@@ -681,12 +688,18 @@ class FilesPanel(wx.Panel):
         self.show_files(self.curPath)
 
     def _move_file(self, path):
+        """
+        :param path: path to move the file from
+        :return: moves the file from the path to where is needed
+        """
         path = "/".join(path.split('/')[1::])
 
         for branch in self.branches:
+            # removing the file from the old location
             if branch[0] == self.curPath:
                 branch[2].remove(self.file_name)
 
+            # adding the file to the new location
             if branch[0] == path:
                 branch[2].append(self.file_name)
 
@@ -694,6 +707,10 @@ class FilesPanel(wx.Panel):
         self.parent.show_pop_up("Moved file successfully", "Success")
 
     def paste_file_request(self, event):
+        """
+        :param event: on click event
+        :return: sends paste file request
+        """
         if self.copied_file:
             src = f"{self.parent.username}/{self.copied_file}"
             dst = f"{self.parent.username}/{self.curPath}".rstrip('/')
@@ -704,9 +721,11 @@ class FilesPanel(wx.Panel):
             self.parent.show_pop_up(f"Your clipboard is empty.", "Error")
 
     def _handle_paste_file(self):
+        """
+        :return: adds the file pasted to the users files
+        """
         file_name = self.copied_file.split('/')[-1]
         text_to_show = "Pasted file successfully."
-        is_dir = self.filesObj[self.copied_file][1]
 
         for branch in self.branches:
             if branch[0] == self.curPath:
@@ -720,38 +739,56 @@ class FilesPanel(wx.Panel):
         self.parent.show_pop_up(text_to_show, "Success")
 
     def open_file_request(self, name):
-        try:
-            msg2send = clientProtocol.pack_open_file_request(
-                f"{self.parent.username}/{self.curPath}/{name}".replace("//", '/')
-            )
-            self.parent.files_comm.send(msg2send)
-        except Exception as e:
-            print(str(e))
+        """
+        :param name: file name
+        :return: sends file edit/open request
+        """
+        msg2send = clientProtocol.pack_open_file_request(
+            f"{self.parent.username}/{self.curPath}/{name}".replace("//", '/')
+        )
+        self.parent.files_comm.send(msg2send)
 
     def _show_progress_bar(self, name, opcode):
-        msg = "Download" if opcode != "04" else "Upload"
-        msg += f" at 0%"
+        """
+        :param name: name of file
+        :param opcode: opcode of message
+        :return: open the progress bar
+        """
+
+        msg = "Download" if opcode != "04" else "Upload" + " at 0%"
 
         self.progressDialog = wx.ProgressDialog(title=name, message=msg, maximum=100,
                                                 style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE)
 
     def _change_progress_bar(self, percent, opcode):
+        """
+        :param percent: percent to show
+        :param opcode: opcode of message
+        :return: changes the progress bar
+        """
         while not self.progressDialog:
             pass
 
         self.progressDialog.Update(percent, f"Download at {percent}%" if opcode != "04" else f"Upload at {percent}%")
-        # wasting time to show update of percent
-        pass
+        time.sleep(0.00001)
 
         if percent == 100:
             self.progressDialog.Destroy()
 
     def show_settings(self, event):
+        """
+        :param event: on click
+        :return: shows settings
+        """
         settings = UserPanel(self.parent, self.frame, self.comm, self.parent.files_comm)
 
         self.parent.change_screen(self, settings)
 
     def zip_folder_request(self, name):
+        """
+        :param name: file name
+        :return: sends zip folder request
+        """
         file_path = f"{self.curPath}/{name}".lstrip('/')
         full_path = f"{self.parent.username}/{file_path}"
 

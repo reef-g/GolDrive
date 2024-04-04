@@ -110,6 +110,8 @@ class ClientComm:
         """
         opcode = params[0]
         path, selected_path, Type, email = "", "", "", ""
+
+        # showing the progress bar
         if opcode == "04":
             file_len = params[1]
             wx.CallAfter(pub.sendMessage, "startBar", name=path.split('/')[-1], opcode=opcode)
@@ -130,6 +132,7 @@ class ClientComm:
 
                 if slices > 1024:
                     if opcode == "11" or opcode == "04":
+                        # changing the progress in the progress bar
                         wx.CallAfter(pub.sendMessage, "changeProgress",
                                      percent=int((len(data) / file_len) * 100), opcode=opcode)
                     data.extend(self.socket.recv(1024))

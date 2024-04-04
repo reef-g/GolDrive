@@ -82,6 +82,18 @@ def _handle_registration(main_server, db, client_ip, code_dic, username, passwor
 
 
 def _handle_email_register(main_server, db, client_ip, code_dic, username, password, email, code, dont_ask_again):
+    """
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param code_dic: dictionary containing the code sent to an email
+    :param username: the username of the client
+    :param password: the password of the client
+    :param email: the email of the client
+    :param code: the code entered
+    :param dont_ask_again: does the user want to verify his email in his computer
+    :return: try's adding the user to the database and sends response to the client
+    """
     ans = 2
 
     if email in code_dic:
@@ -131,6 +143,17 @@ def _handle_login(main_server, db, client_ip, users_by_ip, code_dic, username, p
 
 
 def _handle_email_login(main_server, db, client_ip, users_by_ip, code_dic, email, code, dont_ask_again, username):
+    """
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param code_dic: dictionary containing the code sent to an email
+    :param email: the email of the client
+    :param code: the code entered
+    :param dont_ask_again: does the user want to verify his email in his computer
+    :param username: the username of the client
+    :return: checks if user entered the correct code sent to his email and sends response to client
+    """
     status = 1
 
     if email in code_dic:
@@ -147,6 +170,14 @@ def _handle_email_login(main_server, db, client_ip, users_by_ip, code_dic, email
 
 
 def _create_files_thread(main_server, db, client_ip, users_by_ip, username):
+    """
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the client ip
+    :param users_by_ip: dictionary containing users by their ips
+    :param username: username of client
+    :return: gets the next available port which is used to upload and download files
+    """
     users_by_ip[client_ip] = username
     port_to_give = portsHandler.PortsHandler.get_next_port()
     files_q = queue.Queue()
@@ -159,6 +190,12 @@ def _create_files_thread(main_server, db, client_ip, users_by_ip, username):
 
 
 def handle_files(files_server, files_q, db):
+    """
+    :param files_server: the files server object
+    :param files_q: queue with messages waiting for handle
+    :param db: the database
+    :return: starts the correct function according to the opcode
+    """
     recv_commands = {"04": _handle_change_photo, "11": _handle_download_file, "12": _handle_upload_file,
                      "20": _handle_open_file, "21": _handle_get_details, "22": _handle_delete_profile_photo}
 
@@ -247,11 +284,11 @@ def _handle_open_file(main_server, client_ip, path):
 
 def _handle_upload_file(main_server, client_ip, path, data):
     """
-    :param main_server:
-    :param client_ip:
-    :param path:
-    :param data:
-    :return:
+    :param main_server: the server object
+    :param client_ip: the clients ip
+    :param path: the path of the fle uploaded
+    :param data: the data of the file
+    :return: uploads the file and sends response to the client
     """
     status = 0
     try:
@@ -266,6 +303,13 @@ def _handle_upload_file(main_server, client_ip, path, data):
 
 
 def _handle_create_dir(main_server, db, client_ip, path):
+    """
+    :param main_server: server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param path: the path of the directory to create
+    :return: creates dir and sends response to the client
+    """
     status = 0
     try:
         os.mkdir(f"{Settings.SERVER_FILES_PATH}/{path}")
@@ -277,6 +321,15 @@ def _handle_create_dir(main_server, db, client_ip, path):
 
 
 def _handle_share_file(main_server, db, client_ip, users_by_ip, path, username):
+    """
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param users_by_ip: dictionary of the user logged in according to the ip
+    :param path: path of the file to share
+    :param username: the username of the to share
+    :return: shares the file and sends response to the user
+    """
     status = 0
     user_who_shared = path.split('/')[0]
     path_to_add = f"{Settings.SERVER_FILES_PATH}/{username}/@#$SHAREDFILES$#@/{user_who_shared}"
@@ -304,12 +357,21 @@ def _handle_share_file(main_server, db, client_ip, users_by_ip, path, username):
 
     ips_to_share = [key for key, value in users_by_ip.items() if value == username]
 
+    # sends an update to all the computer logged on to the user shared
     for ip in ips_to_share:
         msg = serverProtocol.pack_add_shared_file(path)
         main_server.send(ip, msg)
 
 
 def _handle_move_file(main_server, db, client_ip, src, dst):
+    """
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param src: the src path
+    :param dst: the dst path
+    :return: moves the file from src to dst and sends response to the client
+    """
     status = 0
     try:
         shutil.move(f"{Settings.SERVER_FILES_PATH}/{src}", f"{Settings.SERVER_FILES_PATH}/{dst}")
@@ -322,6 +384,14 @@ def _handle_move_file(main_server, db, client_ip, src, dst):
 
 
 def _handle_paste_file(main_server, db, client_ip, src, dst):
+    """
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param src: the src path
+    :param dst: the dst path
+    :return: sends paste file request from src to dst according to the protocol
+    """
     status = 0
     full_src_path = f"{Settings.SERVER_FILES_PATH}/{src}"
     full_dst_path = f"{Settings.SERVER_FILES_PATH}/{dst}"
@@ -344,41 +414,60 @@ def _handle_get_details(main_server, client_ip, db, username):
 
 
 def _send_email(main_server, my_db, client_ip, code_dic, email):
-    # Email credentials
+    """
+    :param main_server: the server object
+    :param my_db: the database
+    :param client_ip: the clients ip
+    :param code_dic: dictionary with the code sent and the email sent to
+    :param email: the email the code was sent to
+    :return: sends verify code email to the email
+    """
+
+    # email to send from
     sender_email = "goldriveauth@gmail.com"
     receiver_email = email
     password = "pukb pfll qplp gukh"
 
-    # Create the MIME object
     message = MIMEMultipart()
     message["From"] = sender_email
     message["To"] = receiver_email
     message["Subject"] = "Verify email"
 
+    # the verify code
     verify_code = random.randint(100000, 999999)
     code_dic[email] = str(verify_code)
-    # Add the email body
     body = f"The code to verify is {verify_code}."
     message.attach(MIMEText(body, "plain"))
 
-    # Connect to the SMTP server
-    try:
-        smtp_server = smtplib.SMTP("smtp.gmail.com", 587)
-        smtp_server.starttls()
-        smtp_server.login(sender_email, password)
+    if receiver_email:
+        # connect to the SMTP server
+        try:
+            smtp_server = smtplib.SMTP("smtp.gmail.com", 587)
+            smtp_server.starttls()
+            smtp_server.login(sender_email, password)
 
-        # Send the email
-        smtp_server.sendmail(sender_email, receiver_email, message.as_string())
+            # send the email
+            smtp_server.sendmail(sender_email, receiver_email, message.as_string())
 
-    except smtplib.SMTPException as e:
-        print(f"Error: {e}")
+        except smtplib.SMTPException as e:
+            print(f"Error: {e}")
 
-    else:
-        # Disconnect from the SMTP server
-        smtp_server.quit()
+        else:
+            # disconnect from the SMTP server
+            smtp_server.quit()
 
 
 def _handle_change_email(main_server, db, client_ip, code_dic, username, email, code):
+    """
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param code_dic: dictionary with the code sent to the email and the mail as key
+    :param username: the username of the client
+    :param email: the email of the client
+    :param code: the code entered
+    :return: changes the email in the database and sends response to the client
+    """
     status = 1
     if email in code_dic:
         if code_dic[email] == code:
@@ -390,6 +479,16 @@ def _handle_change_email(main_server, db, client_ip, code_dic, username, email, 
 
 
 def _handle_change_password(main_server, db, client_ip, username, old_pass, new_pass, confirmed_pass):
+    """
+        :param main_server: the server object
+        :param db: the database
+        :param client_ip: the clients ip
+        :param username: the username of the client
+        :param old_pass: the old password
+        :param new_pass: the new password entered
+        :param confirmed_pass: confirmation of the new password entered
+        :return: changes password and sends response to the client
+        """
     status = 1
     if new_pass == confirmed_pass and db.get_password(username) == encryption.hash_msg(old_pass) and len(new_pass) >= 4:
         status = db.change_password(username, encryption.hash_msg(new_pass))
@@ -399,6 +498,13 @@ def _handle_change_password(main_server, db, client_ip, username, old_pass, new_
 
 
 def _handle_change_photo(files_server, client_ip, username, photo_data):
+    """
+    :param files_server: the files server object
+    :param client_ip: the clients ip
+    :param username: the client username
+    :param photo_data: the data of the photo
+    :return: changes photo and sends response to the client
+    """
     try:
         with open(f"{Settings.USER_PROFILE_PHOTOS}/{username}.png", 'wb' if type(photo_data) is bytes else 'w') as f:
             f.write(photo_data)
@@ -410,6 +516,12 @@ def _handle_change_photo(files_server, client_ip, username, photo_data):
 
 
 def _handle_delete_profile_photo(files_server, client_ip, username):
+    """
+    :param files_server: the files server
+    :param client_ip: the clients ip
+    :param username: the clients username
+    :return: deletes profile photo and sends response to the client
+    """
     status = sFileHandler.delete_file(f"{Settings.USER_PROFILE_PHOTOS}/{username}.png")
     if status == 0:
         params = ("04", 'd')
@@ -417,6 +529,14 @@ def _handle_delete_profile_photo(files_server, client_ip, username):
 
 
 def _handle_send_email(main_server, db, client_ip, code_dic, username):
+    """
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param code_dic: dictionary with email and the code that was sent to it
+    :param username: the username of the user
+    :return: sends email to the user and sends response to the user
+    """
     email = db.get_email(username)
     _send_email(main_server, db, client_ip, code_dic, email)
 
@@ -430,6 +550,15 @@ def _handle_send_email(main_server, db, client_ip, code_dic, username):
 
 
 def _handle_check_email(main_server, db, client_ip, code_dic, email, code):
+    """
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param code_dic: dictionary built by email and the code that was sent to it
+    :param email: the clients email
+    :param code: the code entered
+    :return: checks if the code entered is the same one that was send and sends response to the client
+    """
     status = 1
 
     if email in code_dic:
@@ -441,6 +570,15 @@ def _handle_check_email(main_server, db, client_ip, code_dic, email, code):
 
 
 def _handle_forgot_password(main_server, db, client_ip, username, password, confirmed_password):
+    """
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param username: the username of the client
+    :param password: the password of the client
+    :param confirmed_password: the confirmation of the password
+    :return: changed the password and sends response to the client
+    """
     status = 1
 
     if password == confirmed_password and len(password) >= 4:
@@ -451,6 +589,13 @@ def _handle_forgot_password(main_server, db, client_ip, username, password, conf
 
 
 def _handle_zip_folder(main_server, db, client_ip, folder_path):
+    """
+    :param main_server: the server object
+    :param db: the database
+    :param client_ip: the clients ip
+    :param folder_path: the path of the folder
+    :return: zips the folder and sends response to the client
+    """
     status, folder_name = sFileHandler.create_zip(f"{Settings.SERVER_FILES_PATH}/{folder_path}")
     msg = serverProtocol.pack_zip_folder_response(status, folder_name)
     main_server.send(client_ip, msg)

@@ -9,8 +9,7 @@ import chardet
 class Encryption(object):
     def __init__(self, key):
         """
-
-        :param key:
+        :param key: w
         """
         self.bs = AES.block_size
         self.key = hashlib.sha256(str(key).encode()).digest()
@@ -80,45 +79,22 @@ g = 1229
 
 
 if __name__ == '__main__':
-    #server
-    a,A = get_dh_factor()
-    # send
-    # recv
+    a, A = get_dh_factor()
     print(len(str(A)))
+    b, B = get_dh_factor()
 
-    # client
-    b,B = get_dh_factor()
-    # recv
-    # send
-
-    keyServer = create_symmetry_key(a,B)
-    keyclient = create_symmetry_key(b,A)
-    print(keyclient.key)
+    keyServer = create_symmetry_key(a, B)
+    keyClient = create_symmetry_key(b, A)
+    print(keyClient.key)
     print(keyServer.key)
 
-    with open (r"T:\public\יב\imri\projectCode\files\cat.jpg", 'rb') as f:
+    with open(r"T:\public\יב\imri\projectCode\files\cat.jpg", 'rb') as f:
         data = f.read()
-    print(data)
-    #data = "reef"
-    #print(type(data))
 
     print(len(data))
 
     encM = keyServer.enc_msg(data)
     print(len(encM), type(encM))
 
-    decM = keyclient.dec_msg(encM)
+    decM = keyClient.dec_msg(encM)
     print(decM)
-    # data , path = decM[:8532], decM[8532:]
-    # path.decode()
-    # print(path)
-    # print(len(decM))
-    #with open(fr"T:\public\יב\imri\projectCode\files\cat22.jpg", 'wb') as f:
-        #f.write(decM)
-    #with open(r"temp.jpg", 'wb') as f:
-        #f.write(decM)
-
-
-
-
-    #print(msg, encM, decM)
