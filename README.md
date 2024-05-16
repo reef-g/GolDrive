@@ -20,7 +20,8 @@ pip install –r requirements.txt
 - Open settings.py and set change SERVERIP to your servers ip, change USER_FILES_PATH to the directory on your computer that contains the images to run the project.
 
 
-_Firstly make sure your cwd is mounted on the project files._
+*Firstly make sure your cwd is mounted on the project files.*
+
 In order to run the server use the following command in cmd:
 ```cmd
 python .\ServerFiles\serverLogic.py
